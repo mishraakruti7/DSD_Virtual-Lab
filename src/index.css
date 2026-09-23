@@ -1,0 +1,389 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+
+  body {
+    background-color: #FFFFFF;
+    color: #1E1E28;
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    line-height: 1.6;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Bricolage Grotesque', system-ui, sans-serif;
+    letter-spacing: -0.03em;
+    font-weight: 800;
+    color: #1E1E28;
+  }
+
+  .dark h1, .dark h2, .dark h3, .dark h4, .dark h5, .dark h6 {
+    color: #F3F4F6;
+  }
+
+  p {
+    max-width: 75ch;
+  }
+
+  code, pre, kbd, samp {
+    font-family: 'JetBrains Mono', monospace;
+  }
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #F8F7F4;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
+}
+
+.dark ::-webkit-scrollbar-track {
+  background: #1C1D24;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: #3D4052;
+}
+
+/* Breadboard tie-hole grid styling */
+.breadboard-grid {
+  background-image: radial-gradient(circle, #454558 1.7px, transparent 1.7px);
+  background-size: 14px 14px;
+}
+
+/* Tactile button clicks */
+.tactile-btn {
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.tactile-btn:active {
+  transform: translateY(1px) scale(0.98);
+}
+
+/* Dynamic pulse for active clock & signal lines */
+@keyframes wire-pulse {
+  0%, 100% { filter: drop-shadow(0 0 3px rgba(79, 70, 229, 0.8)); }
+  50% { filter: drop-shadow(0 0 8px rgba(16, 185, 129, 0.9)); }
+}
+
+.animate-wire-pulse {
+  animation: wire-pulse 1.4s ease-in-out infinite;
+}
+
+/* Animated electrical current flow along HIGH traces */
+@keyframes flow-dash {
+  to {
+    stroke-dashoffset: -24;
+  }
+}
+
+.wire-flow-high {
+  stroke-dasharray: 6 4;
+  animation: flow-dash 0.9s linear infinite;
+}
+
+/* Realistic LED startup brightness ramp (quick 2-stage flicker) */
+@keyframes led-ramp-on {
+  0% {
+    opacity: 0.2;
+    transform: scale(0.96);
+    filter: brightness(0.6);
+  }
+  30% {
+    opacity: 0.75;
+    transform: scale(1.02);
+    filter: brightness(1.2);
+  }
+  50% {
+    opacity: 0.65;
+    transform: scale(0.99);
+    filter: brightness(0.9);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+    filter: brightness(1);
+  }
+}
+
+.animate-led-on {
+  animation: led-ramp-on 0.16s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Card Interactive hover lift & shadow bloom */
+.card-interactive {
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.card-interactive:hover {
+  transform: translateY(-2px);
+}
+
+.card-interactive:active {
+  transform: translateY(1px) scale(0.99);
+}
+
+/* Subtle circuit trace background texture for academic pages */
+.circuit-pattern-bg {
+  background-image: radial-gradient(rgba(99, 102, 241, 0.07) 1px, transparent 1px), radial-gradient(rgba(236, 72, 153, 0.07) 1px, transparent 1px);
+  background-size: 32px 32px;
+  background-position: 0 0, 16px 16px;
+}
+.dark .circuit-pattern-bg {
+  background-image: radial-gradient(rgba(147, 197, 253, 0.12) 1px, transparent 1px), radial-gradient(rgba(244, 114, 182, 0.12) 1px, transparent 1px);
+}
+
+/* Floating ambient blobs */
+@keyframes blob-drift-1 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(36px, -28px) scale(1.08); }
+  66% { transform: translate(-28px, 20px) scale(0.95); }
+}
+
+@keyframes blob-drift-2 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(-32px, 30px) scale(1.06); }
+  66% { transform: translate(26px, -20px) scale(0.96); }
+}
+
+@keyframes blob-drift-3 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(28px, 24px) scale(0.94); }
+  66% { transform: translate(-30px, -22px) scale(1.07); }
+}
+
+.animate-blob-drift-1 { animation: blob-drift-1 18s ease-in-out infinite; }
+.animate-blob-drift-2 { animation: blob-drift-2 22s ease-in-out infinite; }
+.animate-blob-drift-3 { animation: blob-drift-3 20s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-blob-drift-1,
+  .animate-blob-drift-2,
+  .animate-blob-drift-3,
+  .animate-wire-pulse,
+  .wire-flow-high,
+  .animate-led-on {
+    animation: none !important;
+    transform: none !important;
+  }
+}
+
+/* ========================================================================= */
+/* SIGNATURE BRAND GRADIENTS & UTILITIES                                     */
+/* #4F46E5 -> #9333EA -> #EC4899 (Indigo to Purple to Pink)                 */
+/* ========================================================================= */
+.text-brand-gradient {
+  background: linear-gradient(135deg, #4F46E5 0%, #9333EA 50%, #EC4899 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.btn-brand-gradient {
+  background: linear-gradient(135deg, #4F46E5 0%, #9333EA 50%, #EC4899 100%);
+  color: #FFFFFF !important;
+  box-shadow: 0 6px 20px -2px rgba(79, 70, 229, 0.38);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.btn-brand-gradient:hover {
+  transform: translateY(-1px) scale(1.01);
+  box-shadow: 0 8px 24px -2px rgba(79, 70, 229, 0.48);
+}
+
+.btn-brand-gradient:active {
+  transform: translateY(1px) scale(0.98);
+}
+
+/* Guaranteed high-contrast active nav pill */
+.nav-pill-active {
+  background: linear-gradient(135deg, #4F46E5 0%, #9333EA 50%, #EC4899 100%) !important;
+  color: #FFFFFF !important;
+  font-weight: 800 !important;
+  box-shadow: 0 4px 18px 0 rgba(147, 51, 234, 0.38) !important;
+}
+
+.nav-pill-active * {
+  color: #FFFFFF !important;
+}
+
+/* ========================================================================= */
+/* COLOR-DRENCHED SECTION ZONE WASHES                                       */
+/* Distinct soft-but-visible background washes for alternating sections      */
+/* ========================================================================= */
+.section-wash-coral,
+.zone-mod1-wash {
+  background-color: #FFF5F6;
+}
+.dark .section-wash-coral,
+.dark .zone-mod1-wash {
+  background-color: #1F1517;
+}
+
+.section-wash-amber,
+.zone-mod2-wash {
+  background-color: #FFF9EE;
+}
+.dark .section-wash-amber,
+.dark .zone-mod2-wash {
+  background-color: #221B13;
+}
+
+.section-wash-teal,
+.zone-mod3-wash {
+  background-color: #EDFCF6;
+}
+.dark .section-wash-teal,
+.dark .zone-mod3-wash {
+  background-color: #13221C;
+}
+
+.section-wash-violet,
+.zone-mod4-wash {
+  background-color: #F5F3FF;
+}
+.dark .section-wash-violet,
+.dark .zone-mod4-wash {
+  background-color: #1A172A;
+}
+
+.section-wash-indigo,
+.zone-brand-wash {
+  background-color: #EEF2FF;
+}
+.dark .section-wash-indigo,
+.dark .zone-brand-wash {
+  background-color: #16182C;
+}
+
+/* ========================================================================= */
+/* COLOR-FILLED PANEL HEADER BARS                                           */
+/* ========================================================================= */
+.panel-header-blue {
+  background-color: #4F46E5;
+  color: #FFFFFF !important;
+}
+
+.panel-header-green {
+  background-color: #10B981;
+  color: #FFFFFF !important;
+}
+
+.panel-header-amber {
+  background-color: #FF9F1C;
+  color: #FFFFFF !important;
+}
+
+.panel-header-violet {
+  background-color: #8B5CF6;
+  color: #FFFFFF !important;
+}
+
+.panel-header-coral {
+  background-color: #FF4D5E;
+  color: #FFFFFF !important;
+}
+
+/* ========================================================================= */
+/* BOLD CARD TOP-BORDER ACCENTS (4px)                                       */
+/* ========================================================================= */
+.card-vivid-mod1 {
+  border-top: 4px solid #FF4D5E !important;
+}
+
+.card-vivid-mod2 {
+  border-top: 4px solid #FF9F1C !important;
+}
+
+.card-vivid-mod3 {
+  border-top: 4px solid #10B981 !important;
+}
+
+.card-vivid-mod4 {
+  border-top: 4px solid #8B5CF6 !important;
+}
+
+.card-vivid-brand {
+  border-top: 4px solid #4F46E5 !important;
+}
+
+/* ========================================================================= */
+/* SOLID SATURATED PILL BADGES WITH WHITE TEXT (Guaranteed Contrast >= 4.5:1) */
+/* ========================================================================= */
+.badge-vivid-mod1 {
+  background-color: #FF4D5E;
+  color: #FFFFFF !important;
+  font-weight: 700;
+  box-shadow: 0 2px 8px 0 rgba(255, 77, 94, 0.3);
+}
+
+.badge-vivid-mod2 {
+  background-color: #FF9F1C;
+  color: #FFFFFF !important;
+  font-weight: 700;
+  box-shadow: 0 2px 8px 0 rgba(255, 159, 28, 0.3);
+}
+
+.badge-vivid-mod3 {
+  background-color: #10B981;
+  color: #FFFFFF !important;
+  font-weight: 700;
+  box-shadow: 0 2px 8px 0 rgba(16, 185, 129, 0.3);
+}
+
+.badge-vivid-mod4 {
+  background-color: #8B5CF6;
+  color: #FFFFFF !important;
+  font-weight: 700;
+  box-shadow: 0 2px 8px 0 rgba(139, 92, 246, 0.3);
+}
+
+.badge-vivid-brand {
+  background: linear-gradient(135deg, #4F46E5, #9333EA);
+  color: #FFFFFF !important;
+  font-weight: 700;
+  box-shadow: 0 2px 8px 0 rgba(79, 70, 229, 0.3);
+}
+
+/* ========================================================================= */
+/* AMBIENT MESH GRADIENTS FOR BACKGROUND CANVAS                             */
+/* Clean white base with saturated color accents                             */
+/* ========================================================================= */
+.ambient-soft-bg,
+.ambient-cosmic-bg {
+  background-color: #FFFFFF;
+  background-image: 
+    radial-gradient(at 8% 12%, rgba(255, 77, 94, 0.14) 0px, transparent 48%),
+    radial-gradient(at 92% 14%, rgba(255, 159, 28, 0.15) 0px, transparent 50%),
+    radial-gradient(at 12% 76%, rgba(16, 185, 129, 0.15) 0px, transparent 52%),
+    radial-gradient(at 88% 80%, rgba(139, 92, 246, 0.16) 0px, transparent 52%),
+    radial-gradient(at 50% 48%, rgba(79, 70, 229, 0.12) 0px, transparent 45%);
+  background-attachment: fixed;
+}
+
+.dark .ambient-soft-bg,
+.dark .ambient-cosmic-bg {
+  background-color: #0F0F17;
+  background-image: 
+    radial-gradient(at 8% 12%, rgba(255, 77, 94, 0.12) 0px, transparent 45%),
+    radial-gradient(at 92% 14%, rgba(255, 159, 28, 0.12) 0px, transparent 45%),
+    radial-gradient(at 12% 76%, rgba(16, 185, 129, 0.12) 0px, transparent 45%),
+    radial-gradient(at 88% 80%, rgba(139, 92, 246, 0.14) 0px, transparent 45%),
+    radial-gradient(at 50% 48%, rgba(79, 70, 229, 0.10) 0px, transparent 40%);
+  background-attachment: fixed;
+}
