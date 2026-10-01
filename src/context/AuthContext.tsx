@@ -69,7 +69,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         if (profileData) {
           setProfile(profileData as Profile);
         } else {
-          // Generate fallback profile
+          // Generate fallback profile with default student role
           const fallbackProfile: Profile = {
             id: currentUser.id,
             display_name:
@@ -78,9 +78,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
               currentUser.email?.split('@')[0] ||
               'Student',
             avatar_url: currentUser.user_metadata?.avatar_url || null,
+            role: 'student', // Default role
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
           };
+
+          // Insert profile into database
+          await supabase.from('profiles').insert([fallbackProfile]);
+
           setProfile(fallbackProfile);
         }
 
@@ -243,6 +248,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       id: mockUser.id,
       display_name: name,
       avatar_url: null,
+      role: 'student', // Default role for demo
       institution: 'Shah & Anchor Kutchhi Engineering College',
       department: 'Electronics & Computer Science',
       created_at: new Date().toISOString(),
