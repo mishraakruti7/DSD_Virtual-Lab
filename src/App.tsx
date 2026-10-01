@@ -21,6 +21,10 @@ import { GlossaryPage } from './pages/GlossaryPage';
 import { ProgressDashboardPage } from './pages/ProgressDashboardPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { LogicAnalyzerScope } from './components/stations/Station4LogicAnalyzer/LogicAnalyzerScope';
+import { AdminDashboardPage } from './pages/AdminDashboardPage';
+import { ProtectedRoute } from './components/auth/ProtectedRoute';
+import { StudentDashboardPage } from './pages/StudentDashboardPage';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { AuthModal } from './components/auth/AuthModal';
 import { DsdTutorChat } from './components/tutor/DsdTutorChat';
@@ -166,9 +170,31 @@ function AppContent() {
 
 export function App() {
   return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
+    <BrowserRouter>
+      <AuthProvider>
+        <Routes>
+          <Route path="/" element={<AppContent />} />
+          <Route
+            path="/admin"
+            element={
+              <ProtectedRoute roles={['teacher', 'admin']}>
+                <AdminDashboardPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/student"
+            element={
+              <ProtectedRoute roles={['student']}>
+                <StudentDashboardPage />
+              </ProtectedRoute>
+            }
+          />
+          {/* Catch-all redirect to home */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </AuthProvider>
+    </BrowserRouter>
   );
 }
 

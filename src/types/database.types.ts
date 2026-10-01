@@ -6,6 +6,7 @@ export interface Profile {
   id: string;
   display_name: string | null;
   avatar_url: string | null;
+  role: 'student' | 'teacher' | 'admin';
   institution?: string;
   department?: string;
   created_at: string;
@@ -69,4 +70,44 @@ export interface ChatFeedbackRecord {
   feedback_text?: string | null;
   topic_context?: string | null;
   created_at: string;
+}
+
+export interface ModuleRecord {
+  id: string;
+  title: string;
+  description?: string | null;
+  content: any;
+  order_number: number;
+  created_by?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface LessonRecord {
+  id: string;
+  module_id: string;
+  title: string;
+  content: string;
+  order_number: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface QuizRecord {
+  id: string;
+  module_id: string;
+  title: string;
+  created_at: string;
+}
+
+export interface QuizQuestionRecord {
+  id: string;
+  quiz_id: string;
+  question: string;
+  option_a: string;
+  option_b: string;
+  option_c: string;
+  option_d: string;
+  correct_answer: string;
+  marks: number;
 }
