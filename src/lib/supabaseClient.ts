@@ -31,6 +31,7 @@ export function isSupabaseConfigured(): boolean {
 }
 
 export const SUPABASE_CONFIGURED = isSupabaseConfigured();
+export const IS_PROD_UNCONFIGURED = !SUPABASE_CONFIGURED && !import.meta.env.DEV;
 
 // Use real client or fallback dummy client
 let clientInstance: SupabaseClient;

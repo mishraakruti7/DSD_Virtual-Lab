@@ -69,3 +69,71 @@ export interface ProbeReading {
   frequencyHz?: number;
   netId?: number;
 }
+
+export type ComponentCategory =
+  | 'passives'
+  | 'power'
+  | 'switches'
+  | 'outputs'
+  | 'logic_ic'
+  | 'sequential_ic'
+  | 'sensors'
+  | 'modules'
+  | 'microcontrollers';
+
+export type PinRole = 'vcc' | 'gnd' | 'input' | 'output' | 'passive' | 'clock';
+
+export interface WireBendPoint {
+  x: number;
+  y: number;
+}
+
+export interface ComponentPin {
+  id: string; // e.g. "p1", "anode", "cathode", "vcc", "gnd"
+  label: string;
+  role: PinRole;
+  xOffset: number; // relative SVG pixel offset from component center
+  yOffset: number;
+}
+
+export interface CircuitComponent {
+  id: string; // unique ID
+  type: string; // e.g. 'resistor', 'led', '7408', '555_timer', 'toggle_switch', 'dc_power', etc.
+  name: string;
+  category: ComponentCategory;
+  x: number; // SVG canvas coordinate
+  y: number;
+  rotation: 0 | 90 | 180 | 270;
+  pins: ComponentPin[];
+  properties: {
+    resistance?: number; // Ohms
+    capacitance?: string; // e.g. "10uF", "100nF"
+    color?: string; // e.g. 'red', 'green', 'blue', 'yellow'
+    state?: boolean; // switch state
+    voltage?: number;
+    label?: string;
+    pinCount?: number;
+    activeSegmentStates?: { [seg: string]: boolean };
+    [key: string]: any;
+  };
+}
+
+export interface CircuitModel {
+  id?: string;
+  name: string;
+  description?: string;
+  components: CircuitComponent[];
+  wires: BreadboardWire[];
+}
+
+export interface CircuitHealthIssue {
+  id: string;
+  severity: 'error' | 'warning' | 'info';
+  title: string;
+  reason: string;
+  fixSuggestion: string;
+  theoryModuleTab?: string;
+  theoryTopic?: string;
+  relatedComponentId?: string;
+}
+

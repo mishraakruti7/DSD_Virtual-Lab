@@ -1,7 +1,8 @@
 import React from 'react';
-import { BookOpen, ShieldCheck, Heart, Sparkles, School } from 'lucide-react';
+import { BookOpen, ShieldCheck, Heart, Sparkles, School, ShieldAlert } from 'lucide-react';
 import { SITE_CONFIG } from '../../data/site.config';
 import { COURSE_OUTCOMES } from '../../data/cos';
+import { Link } from 'react-router-dom';
 
 export const Footer: React.FC = () => {
   return (
@@ -50,14 +51,14 @@ export const Footer: React.FC = () => {
           <div>
             <h4 className="text-xs font-mono font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-400 mb-3 flex items-center gap-1.5">
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-700 dark:text-emerald-400" />
-              Academic Standards & Faculty
+              Compliance & Faculty Contact
             </h4>
             <ul className="text-xs text-slate-700 dark:text-stone-400 space-y-2">
-              <li>• 100% Pure Client-Side Computation (Zero Backend)</li>
-              <li>• Aligned with Mumbai University / SAKEC Curriculum</li>
-              <li>• Bloom's Taxonomy Cognitive Level Mapping</li>
+              <li>• Mumbai University / SAKEC Curriculum Aligned</li>
+              <li>• India DPDP Act 2023 & WCAG 2.2 AA Aligned</li>
+              <li>• Zero Third-Party Advertising or Tracking Cookies</li>
               <li className="pt-2 text-[11px] font-mono border-t border-[#ded4c2] dark:border-stone-800 text-slate-600 dark:text-stone-400">
-                <strong className="text-slate-900 dark:text-stone-300">Faculty Coordinator:</strong><br />
+                <strong className="text-slate-900 dark:text-stone-300">Course / Grievance Contact:</strong><br />
                 {SITE_CONFIG.facultyCoordinator.namePlaceholder}<br />
                 {SITE_CONFIG.facultyCoordinator.emailPlaceholder}
               </li>
@@ -65,14 +66,39 @@ export const Footer: React.FC = () => {
           </div>
         </div>
 
-        {/* Bottom Bar */}
-        <div className="pt-6 border-t border-[#ded4c2] dark:border-stone-800 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-600 dark:text-stone-400 gap-3 font-mono">
-          <div>
-            © {new Date().getFullYear()} {SITE_CONFIG.institution.collegeAbbr} • Digital System Design Course Workbench
+        {/* Public Legal Policies Links Bar */}
+        <div className="pt-6 border-t border-[#ded4c2] dark:border-stone-800 flex flex-wrap items-center justify-between gap-4 text-xs font-mono text-slate-600 dark:text-stone-400">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+            <Link to="/privacy" className="hover:text-cyan-700 dark:hover:text-cyan-400 underline underline-offset-2 focus-visible:ring-2 focus-visible:ring-cyan-500 rounded px-1">
+              Privacy Notice
+            </Link>
+            <span aria-hidden="true">•</span>
+            <Link to="/terms" className="hover:text-cyan-700 dark:hover:text-cyan-400 underline underline-offset-2 focus-visible:ring-2 focus-visible:ring-cyan-500 rounded px-1">
+              Terms & Conditions
+            </Link>
+            <span aria-hidden="true">•</span>
+            <Link to="/cookies" className="hover:text-cyan-700 dark:hover:text-cyan-400 underline underline-offset-2 focus-visible:ring-2 focus-visible:ring-cyan-500 rounded px-1">
+              Cookie & Storage Policy
+            </Link>
+            <span aria-hidden="true">•</span>
+            <Link to="/accessibility" className="hover:text-cyan-700 dark:hover:text-cyan-400 underline underline-offset-2 focus-visible:ring-2 focus-visible:ring-cyan-500 rounded px-1">
+              Accessibility Statement
+            </Link>
+            <span aria-hidden="true">•</span>
+            <Link to="/contact" className="hover:text-cyan-700 dark:hover:text-cyan-400 underline underline-offset-2 focus-visible:ring-2 focus-visible:ring-cyan-500 rounded px-1">
+              Contact & Grievance
+            </Link>
+            <span aria-hidden="true">•</span>
+            <Link to="/my-data" className="hover:text-cyan-700 dark:hover:text-cyan-400 underline underline-offset-2 focus-visible:ring-2 focus-visible:ring-cyan-500 rounded px-1 flex items-center gap-1 font-bold text-cyan-800 dark:text-cyan-300">
+              <ShieldAlert className="w-3 h-3" />
+              <span>My Data Rights</span>
+            </Link>
           </div>
+
           <div className="flex items-center gap-1">
-            <span>Built for engineering learners with</span>
-            <Heart className="w-3.5 h-3.5 text-rose-500 fill-rose-500 mx-0.5" />
+            <span>© {new Date().getFullYear()} {SITE_CONFIG.institution.collegeAbbr} • Built with</span>
+            <Heart className="w-3.5 h-3.5 text-rose-500 fill-rose-500 mx-0.5" aria-hidden="true" />
+            <span>for engineering learners</span>
           </div>
         </div>
       </div>

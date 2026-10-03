@@ -116,8 +116,8 @@ export const CircuitGalleryPage: React.FC = () => {
               Interactive SVG Circuit Schematics & Flowcharts
             </span>
           </div>
-          <h1 className="text-2xl sm:text-4xl font-display font-black tracking-tight text-ink-900 dark:text-white">
-            <span className="text-brand-gradient">DSD Circuit &</span> Architecture Gallery
+          <h1 className="text-2xl sm:text-4xl font-display font-black tracking-tight text-ink-900 dark:text-cream-paper">
+            Interactive Circuit & <span className="text-brand-gradient">Architecture Gallery</span>
           </h1>
           <p className="text-xs sm:text-sm font-sans text-ink-700 dark:text-cream-muted mt-2 max-w-2xl leading-relaxed font-medium">
             High-resolution, responsive vector diagrams including transistor-level TTL totem-pole gates, CMOS complementary networks, Master-Slave architectures, FSM transition graphs, and ASM flowcharts.

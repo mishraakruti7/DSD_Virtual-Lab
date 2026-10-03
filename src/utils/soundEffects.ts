@@ -184,3 +184,34 @@ export function playAlarmBuzz() {
     console.debug('Audio playback error', e);
   }
 }
+
+/**
+ * Low double-frequency buzzer for invalid wire connections or rejected circuit actions
+ */
+export function playErrorClick() {
+  if (isMuted()) return;
+  const ctx = getAudioContext();
+  if (!ctx) return;
+
+  try {
+    const now = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(180, now);
+    osc.frequency.exponentialRampToValueAtTime(110, now + 0.12);
+
+    gain.gain.setValueAtTime(0.1, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+
+    osc.start(now);
+    osc.stop(now + 0.13);
+  } catch (e) {
+    console.debug('Audio playback error', e);
+  }
+}
+

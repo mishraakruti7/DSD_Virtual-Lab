@@ -1,0 +1,393 @@
+<USER_REQUEST>
+MASTER PROMPT (PART 6) — Legal Compliance, Privacy & Consent, Accessibility,
+Production Backend for 1000+ Users, and a Database Showcase for Faculty
+
+Continues Parts 1-5. Do not break earlier features. Never invent legal facts,
+names, addresses or compliance claims. Wherever a real name/contact is needed,
+use a clearly marked placeholder like [COLLEGE LEGAL NAME], [GRIEVANCE
+OFFICER NAME], [CONTACT EMAIL], [POSTAL ADDRESS] and list every placeholder in
+docs/TODO_BEFORE_LAUNCH.md. Never write "fully GDPR/DPDP compliant". Write
+policies in plain English (about Grade 8 reading level), with a version
+number and effective date.
+
+CONTEXT: Indian engineering-college portal (students 18+ expected; faculty;
+admin). Applicable: India's DPDP Act 2023 + DPDP Rules 2025 (core duties
+phase in around May 2027; SPDI Rules 2011 apply until then) — design to the
+stricter DPDP standard now. Verify the current status from official sources
+(meity.gov.in / pib.gov.in) before writing the policy text.
+
+===============================================================================
+TASK 24 — AUDIT FIRST (deliver a written report before changing anything)
+===============================================================================
+Produce docs/AUDIT.md with four inventories, based on the CURRENT code:
+ a) DATA INVENTORY: every personal-data field collected or stored (auth
+    email, display name, avatar URL, institution, progress, quiz attempts,
+    saved circuits, AI chat messages, support messages, report history,
+    IP/log data held by providers). For each: purpose, table/location,
+    who can see it, retention, and whether it is truly NECESSARY.
+ b) THIRD-PARTY INVENTORY: every external service/domain the site contacts
+    (Supabase, Google OAuth, Anthropic API, Google Fonts, any CDN, icon or
+    script host, any embed). Search the whole source, index.html, dist and
+    the network tab; include anything added by earlier prompts.
+ c) BROWSER STORAGE INVENTORY: every cookie, localStorage, sessionStorage,
+    IndexedDB key (name, purpose, duration, essential or not).
+ d) ANALYTICS/TRACKING CHECK: confirm whether any analytics, session
+    replay, advertising pixel, fingerprinting or heatmap exists. If none,
+    say so explicitly. Do NOT add any.
+Also scan for dangerous patterns: dangerouslySetInnerHTML, eval, secrets in
+client code, service-role key anywhere in src/, console logs of personal data.
+
+===============================================================================
+TASK 25 — REAL URLS + LEGAL PAGES
+===============================================================================
+25a. The app currently switches pages with an activeTab state, so pages have
+   no URLs. Migrate to real routing (React Router) with a URL for every
+   page (/, /theory, /labs, /breadboard, /quiz, /privacy, /terms, /cookies,
+   /accessibility, /contact, /faculty/..., /admin/...). Keep behaviour the
+   same; add a proper 404 page, working Back/Forward, deep links, and a
+   unique document.title per route. Guard private routes by role. Mark
+   private pages noindex and add robots.txt.
+25b. Create PUBLIC pages (no login needed), linked in the footer on EVERY
+   page and inside the signup form and emails:
+   - Privacy Policy / Privacy Notice (plain language): who is responsible
+     ([COLLEGE LEGAL NAME], course faculty), what data, why (purpose for each
+     item), legal basis = consent, who receives it (Supabase = database &
+     login host; Google = optional sign-in; Anthropic = processes AI tutor
+     messages; hosting provider; email provider), storage region, retention
+     periods, security measures, user rights (access, correction, erasure,
+     withdraw consent, grievance, nominate someone), how to exercise them
+     (link to /my-data), grievance officer contact, children (18+ only /
+     minors need verifiable parental consent — state the college's chosen
+     rule), breach handling, changes to the policy, effective date, version.
+     State clearly that faculty/admin can see student progress, quiz scores
+     and saved circuits, and why.
+   - Terms and Conditions: who may use the site, accounts, acceptable use,
+     academic honesty, user content (saved circuits), AI tutor disclaimer
+     (may be inaccurate; not a substitute for faculty), simulator
+     disclaimer (educational, simplified, not for real-world safety
+     decisions), availability, suspension, IP/licences for third-party
+     parts, limitation of liability, governing law/jurisdiction
+     ([COURT/CITY] placeholder), contact.
+   - Cookie & Local Storage Policy: a table of every item from Task 24c
+     (name, purpose, duration, essential?) and the statement that NO
+     advertising or analytics cookies are used (only if true after audit).
+   - Accessibility Statement (conformance target WCAG 2.2 AA, known
+     limitations such as the drag-and-drop canvas and its alternatives,
+     how to report problems, contact).
+   - Contact / Grievance page (extend Part 2's Contact Us).
+25c. Keep a `legal_documents` content source in the repo (Markdown files with
+   version + date) so policies can be updated without code changes; show
+   "Last updated" on each page and keep old versions in docs/legal-history/.
+
+===============================================================================
+TASK 26 — CONSENT, DATA MINIMISATION AND USER RIGHTS
+===============================================================================
+26a. SIGNUP CONSENT: a clear, UNTICKED checkbox (not pre-selected, not
+   bundled with anything else): "I have read the Privacy Notice and agree to
+   the Terms" with links opening in a new tab. Signup is blocked until
+   ticked. Add an 18+ confirmation (or the college's chosen rule). Show a
+   short, separate, plain-language notice of what is collected and why,
+   next to the form (not buried in the policy).
+26b. CONSENT RECORDS: table `consent_records` (user_id, document, version,
+   purpose, granted boolean, created_at). Record signup consent and every
+   later grant/withdrawal. When Privacy/Terms versions change, require
+   re-acceptance on next login. Do not store IP addresses in this table.
+26c. AI TUTOR CONSENT: before a user's FIRST tutor message, show a one-time
+   notice: messages are sent to a third-party AI provider to generate
+   answers; don't enter passwords or personal details; optional history
+   saving. Require "Continue" (recorded in consent_records). Add a toggle
+   "Save my chat history" (default OFF unless essential) and a "Delete my
+   chat history" button. Strip/avoid sending names or emails to the model.
+26d. FORM CONSENT on Contact, Feedback and Help forms: short line under the
+   fields "We use your message only to reply and improve the course portal"
+   plus a required checkbox and a link to the Privacy Notice.
+26e. DATA MINIMISATION (apply the Task 24a results): collect only email,
+   display name, role and course activity. Remove avatar_url storage unless
+   essential (show initials instead), remove unused columns, never collect
+   phone, date of birth, address, caste, religion, precise location,
+   device fingerprints. Roll number only if faculty reports truly need it —
+   make it optional and state the purpose. Request only email/profile/openid
+   scopes from Google.
+26f. RETENTION: add scheduled jobs (pg_cron) — delete chat_history older than
+   90 days (configurable), anonymise resolved support messages after 12
+   months, purge expired reports, delete unverified accounts after 7 days.
+   Document each period in the Privacy Notice and docs/DATA_INVENTORY.md.
+26g. "MY DATA" PAGE (/my-data): download my data (JSON), delete my chat
+   history, withdraw consent (with plain explanation of what stops working),
+   delete my account (confirmation step; cascades all personal rows and
+   removes the auth user via an Edge Function), and a link to file a
+   grievance. Withdrawing must be as easy as giving consent.
+26h. ACCESS LOGGING: table `audit_log` (actor_id, action, target_user_id,
+   resource, created_at) written whenever faculty/admin open a student's
+   detail view, export a report, change a role, or deactivate an account.
+   Admin can view it. Faculty see only what their role allows.
+26i. docs/INCIDENT_RESPONSE.md: breach runbook (detect, contain, assess,
+   notify affected users and the authorities within the legally required
+   time — confirm the current period from official sources, rotate keys,
+   post-mortem). docs/DATA_INVENTORY.md: the register from Task 24.
+
+===============================================================================
+TASK 27 — COOKIES, STORAGE, THIRD-PARTY EMBEDS, ANALYTICS
+===============================================================================
+27a. DECISION RULE (document in docs/COOKIES.md): strictly necessary storage
+   (login session, theme/font-size/contrast/sound preferences the user sets,
+   local circuit draft) needs an information notice, not a blocking consent
+   banner. ANY non-essential script (analytics, error replay, embeds that set
+   cookies, ads) requires opt-in BEFORE it loads.
+27b. Add a small, non-blocking "Storage notice" (first visit only, dismissible,
+   keyboard accessible, with a link to /cookies). No dark patterns; if you
+   build a preferences dialog, "Reject non-essential" must be as prominent as
+   "Accept". Build a tiny ConsentManager so that any future non-essential
+   script can only load after consent — but ship with NONE enabled.
+27c. SELF-HOST FONTS: remove the Google Fonts <link> tags and preconnects;
+   download the three font families, subset to Latin, ship as woff2 from the
+   same origin with font-display: swap and preload for the primary font.
+27d. Remove every other third-party asset host (CDN scripts, icon fonts,
+   remote images). Anything unavoidable gets Subresource Integrity and is
+   listed in the Privacy/Cookie pages.
+27e. Embeds: do not embed YouTube/Maps/social widgets directly. If videos are
+   needed, use a click-to-load placeholder that loads youtube-nocookie.com
+   only after the user clicks, with a visible notice.
+27f. ANALYTICS: none by default. If the faculty want usage numbers, build
+   privacy-friendly first-party stats from our own database (counts only, no
+   cross-site tracking, no fingerprinting) shown on the Admin Overview.
+   If a third-party analytics tool is ever requested, use a cookieless
+   privacy-focused one, IP-anonymised, opt-in, and disclosed in the policies.
+27g. SECURITY HEADERS (in the hosting config file, e.g. vercel.json /
+   _headers): Content-Security-Policy (default-src 'self'; allow only the
+   Supabase project URL, Google OAuth and the Edge Function origin),
+   Strict-Transport-Security, X-Content-Type-Options, Referrer-Policy
+   (strict-origin-when-cross-origin), Permissions-Policy, frame-ancestors
+   'none'. Fix anything the CSP breaks instead of loosening it blindly.
+
+===============================================================================
+TASK 28 — ACCESSIBILITY (target WCAG 2.2 AA)
+===============================================================================
+Known gaps found in the audit (fix all, then verify with tools):
+ - 202 <button> elements and none has aria-label; many are icon-only.
+ - 23 uses of `outline-none` remove the focus indicator.
+ - Navbar dropdowns open on mouse hover only.
+ - Inputs without associated labels in several places.
+28a. STRUCTURE: <html lang="en">, a visible "Skip to main content" link,
+   landmarks (header, nav, main, footer), one h1 per page with a logical
+   heading order, descriptive page titles, focus moved to the page heading
+   on route change, visible breadcrumbs where pages are nested.
+28b. KEYBOARD: everything usable without a mouse. Replace every
+   `outline-none` with a visible :focus-visible ring (≥3:1 contrast, 2px).
+   Dropdown menus open on click, Enter/Space and arrow keys, close on Escape,
+   expose aria-expanded/aria-haspopup, and never rely on hover. Modals, the
+   tutor panel and the quick-search palette trap focus, close on Escape and
+   return focus to the opener; use correct roles (dialog, combobox/listbox).
+28c. FORMS: every input has a visible <label> (not placeholder-only), correct
+   type and autocomplete values (email, current-password, new-password,
+   name), required fields marked in text and aria-required, errors shown in
+   text next to the field, linked with aria-describedby, announced via
+   aria-live, and the first error receives focus on submit. Password
+   show/hide button has an accessible name and state. Never auto-submit or
+   time out forms without warning.
+28d. BUTTON AND LINK LABELS: clear, specific verbs. Icon-only buttons get
+   aria-label (e.g. "Open AI tutor", "Zoom in", "Undo last wire", "Close
+   panel"). Replace vague labels: "Place" → "Place resistor on breadboard";
+   "Verify" → "Verify circuit"; "Reset" → "Reset zoom" or "Reset circuit"
+   as appropriate; "Submit" → "Send feedback"; "More" → "More pages". No
+   "click here". Links that open a new tab say so.
+28e. IMAGES AND GRAPHICS: meaningful images get specific alt text; purely
+   decorative images and icons get alt="" / aria-hidden. Each circuit
+   diagram or SVG gets a title/aria-label and a short text description of
+   what it shows (and a data table or text equivalent for charts and truth
+   tables; use <th scope> on tables). Gallery images each need unique alt
+   text. Provide a text summary of any breadboard preset.
+28f. COLOUR AND CONTRAST: audit every text/background pair in light AND dark
+   mode — normal text ≥4.5:1, large text and UI components/focus rings/
+   icons ≥3:1. Fix by adjusting existing design tokens (not by adding random
+   colours). Check specifically: gradient headings (bg-clip-text), cream/
+   amber warning cards, status badges (HIGH/LOW, Warning), disabled states,
+   placeholder text, module accent colours. Do not use colour alone to carry
+   meaning (wire colours, LED on/off, HIGH/LOW, pass/fail) — add text,
+   icons or patterns.
+28g. MOTION AND SENSORY: honour prefers-reduced-motion (disable parallax,
+   pulsing, auto-advancing "Did you know" carousels or give pause controls);
+   sound effects default OFF or clearly toggleable (keep the existing
+   toggle); text can scale to 200% without breaking layout; touch targets
+   at least 24x24px (44px preferred).
+28h. DYNAMIC CONTENT: Circuit Health issues, toasts, quiz feedback and tutor
+   replies are announced through polite aria-live regions.
+28i. THE BREADBOARD CANVAS (hardest part — be honest about it): drag-and-drop
+   alone is not enough (WCAG 2.2 requires a non-dragging alternative). Add:
+   (1) click-to-place from the palette with a "Place at selected hole"
+   action; (2) a "Parts and connections" panel listing placed parts and
+   wires as real focusable list items with Move/Rotate/Delete buttons;
+   (3) a keyboard "Add wire" dialog where the user picks From-pin and To-pin
+   from labelled dropdowns; (4) arrow-key navigation across holes with the
+   focused hole announced ("row 12, column c"). Document anything still not
+   keyboard-operable in the Accessibility Statement.
+28j. VERIFY: add eslint-plugin-jsx-a11y, run axe-core (via Playwright or
+   Vitest) on every route in light/dark, run Lighthouse accessibility, and
+   do a manual keyboard-only pass plus a screen-reader pass (NVDA/VoiceOver).
+   Fix all critical/serious findings; list the rest in docs/A11Y_REPORT.md.
+
+===============================================================================
+TASK 29 — PRODUCTION-GRADE BACKEND FOR 1000+ USERS (right-sized, not over-built)
+===============================================================================
+Goal: reliably serve 1000+ registered students with hundreds active at once,
+the way a well-run product team would — using managed services, not
+microservices. Check CURRENT official Supabase plan limits (database size,
+connections, auth emails, Edge Function invocations, realtime connections,
+backups, project pausing) from their docs and list them in docs/CAPACITY.md;
+do not rely on memory. Recommend the plan needed (free projects can pause and
+have small limits) and say what it would cost me to decide.
+29a. ENVIRONMENTS: separate Supabase projects for development, staging and
+   production, each with its own keys. All schema changes live in
+   supabase/migrations (Supabase CLI), reviewed and applied in order; no
+   manual dashboard edits to production. `.env.example` documents every
+   variable; no secrets in git; secret scanning enabled; service-role key
+   only inside Edge Functions, never in the browser bundle.
+29b. REGION AND EMAIL: host the project in the Mumbai region where available.
+   Replace the default email sender with a real SMTP provider (the built-in
+   one is rate-limited and meant for testing) so 1000 students can verify
+   email and reset passwords; use a branded sender domain with SPF/DKIM/
+   DMARC, and branded email templates linking to /privacy and /terms.
+   Publish the Google OAuth app out of "Testing" mode (testing mode caps the
+   user count) and configure the consent screen with the real privacy and
+   terms URLs.
+29c. DATABASE DESIGN: every table has primary key, created_at/updated_at,
+   foreign keys with ON DELETE rules, NOT NULL and CHECK constraints, and
+   enums for roles/status. Add indexes for every frequent query, e.g.
+   progress(user_id), quiz_attempts(user_id, created_at DESC),
+   saved_circuits(user_id, updated_at DESC), chat_history(user_id,
+   created_at), support_messages(status, created_at), audit_log(created_at),
+   faculty_reports(generated_by). Run EXPLAIN on the heaviest queries.
+29d. ROW LEVEL SECURITY: enabled on EVERY table, default deny; policies per
+   role; wrap auth.uid() as (select auth.uid()) for performance; role lookup
+   through a SECURITY DEFINER function with a fixed search_path; separate
+   policies for select/insert/update/delete; test them with real user
+   sessions (student cannot read another student; faculty read-only;
+   only admin changes roles). Add automated RLS tests (pgTAP or scripted).
+29e. FACULTY DASHBOARD AT SCALE: never compute class statistics by scanning
+   every student's rows on each page load. Create summary tables or
+   materialised views (e.g. student_progress_summary, class_stats_daily)
+   refreshed on a schedule and/or by triggers; paginate student tables with
+   keyset pagination; sort/filter server-side.
+29f. WRITE-LOAD CONTROL: breadboard autosave is debounced (e.g. 10 s after
+   the last change), sent only when the circuit actually changed, with a
+   size cap per circuit and a max circuits per user; quiz attempts are
+   written once at submit; "last active" updates are throttled (max once
+   per few minutes); no polling — use Realtime only where it is needed
+   (e.g. support inbox), not for everything.
+29g. HEAVY WORK IN THE BACKGROUND: report generation (PDF/CSV for all
+   students), bulk exports and data deletion run asynchronously through a
+   job table or queue + Edge Function/pg_cron, show progress/status in the
+   UI, and store the finished file in private Storage with signed,
+   expiring URLs. Storage buckets have size limits, allowed MIME types and
+   RLS.
+29h. AI TUTOR COST AND ABUSE CONTROL: keep the existing 30 messages/hour
+   limit and add a per-user daily cap, max input length, max output tokens,
+   request timeout with retry/backoff, a global daily spend/usage ceiling
+   (circuit breaker returning a friendly "tutor is resting" message), basic
+   abuse detection, caching for repeated FAQ-style questions, and logging of
+   usage counts (not message content) for the admin dashboard. The Anthropic
+   key lives only in Edge Function secrets.
+29i. SECURITY: input validation on client AND server (e.g. zod) for every
+   form and Edge Function; CORS limited to our domain; rate limiting on
+   auth and contact endpoints; CAPTCHA (e.g. Cloudflare Turnstile — disclose
+   it) on signup and contact forms; strong password rules and leaked-
+   password protection if the plan supports it; MFA (TOTP) required for
+   admin and faculty accounts; sensible session lifetimes; account
+   deactivation honoured server-side; dependency audit (npm audit) and
+   automated updates (Dependabot).
+29j. FRONTEND PERFORMANCE: route-level code splitting (React.lazy) — the
+   simulator/breadboard loads only when opened; bundle analysis with a size
+   budget; hashed assets with long-lived immutable cache headers; images in
+   WebP/AVIF with explicit width/height; self-hosted subset fonts; data
+   fetching through a cache layer (TanStack Query) with stale-while-
+   revalidate; virtualise long lists; Lighthouse CI budget (target LCP <
+   2.5 s on a mid-range phone, no layout shift).
+29k. RELIABILITY AND OBSERVABILITY: React error boundaries with friendly
+   fallback; offline/API-down banner; structured logs in Edge Functions;
+   error monitoring (e.g. Sentry) with personal data scrubbed and listed in
+   the Privacy Notice; uptime monitor with alerting; a /health check;
+   daily database backups (and point-in-time recovery if the plan offers
+   it) with a restore actually TESTED once and documented in
+   docs/BACKUP_RESTORE.md.
+29l. CI/CD: GitHub Actions on every pull request — type-check, lint
+   (including jsx-a11y), unit tests (Vitest), a11y tests, build, link check
+   (npm run check-links), migration dry-run on a throwaway database; main
+   branch deploys to staging automatically, production by manual approval.
+   Hosting on a CDN-backed static host (Vercel/Netlify/Cloudflare Pages)
+   with HTTPS and a custom domain.
+
+===============================================================================
+TASK 30 — PROVE IT: LOAD TEST AND SECURITY CHECKS
+===============================================================================
+30a. Write k6 scripts (load-tests/) simulating 1000 virtual users on STAGING
+   (never production) with realistic flows: sign in, open dashboard, read
+   theory, submit a quiz, save a circuit, send a tutor message (use a mocked
+   AI endpoint, never the real paid API), faculty opening the class
+   dashboard, generating a report. Ramp to 1000 users, hold, then ramp down.
+30b. Targets: p95 API response < 500 ms, error rate < 1%, database CPU and
+   connections within limits, no failed auth emails. Record results with
+   graphs in docs/LOAD_TEST_REPORT.md including the bottlenecks found and
+   what you changed.
+30c. Security checks: run OWASP ZAP baseline against staging; try RLS bypass
+   attempts (read another user's rows, escalate role, call admin functions
+   as a student); check that no secret appears in the built JS; report all
+   findings and fixes in docs/SECURITY_REPORT.md.
+
+===============================================================================
+TASK 31 — DATABASE & ARCHITECTURE SHOWCASE FOR THE FACULTY
+===============================================================================
+31a. Admin-only page "System & Database" (read-only) with tabs:
+   - ER Diagram: auto-generated from the live schema (Mermaid or similar),
+     rendered in-page, exportable as SVG/PNG.
+   - Tables: for every table — purpose in one sentence, columns/types,
+     primary and foreign keys, indexes, RLS policy summary, and row count
+     (via an admin-only SECURITY DEFINER function).
+   - Live metrics: users by role, signups per day, quiz attempts per day,
+     circuits saved, tutor messages per day (counts only), storage used,
+     background-job status.
+   - Data preview: the latest 20 rows of each table with personal data MASKED
+     by default (j***@gmail.com, initials instead of full names), implemented
+     through masked database views. A "show real data" switch is admin-only
+     and writes an audit_log entry.
+   - Architecture: a diagram of Browser → CDN/static hosting → React app →
+     Supabase (Auth, Postgres with RLS, Storage, Edge Functions, scheduled
+     jobs) → external services (Anthropic API, Google sign-in, email
+     provider, monitoring), with a short explanation of each box and why it
+     was chosen.
+31b. Create a STAGING demo dataset for presenting: a seed script that
+   generates ~1000 clearly SYNTHETIC students (flagged is_demo = true, fake
+   email domain such as @example.invalid), their progress, quiz attempts and
+   circuits, so dashboards and reports can be shown at scale without exposing
+   real students. The seed script must refuse to run against production.
+31c. Generate docs/DATABASE.md (schema, ER diagram, RLS rules in plain
+   English, indexes, backup policy, scaling plan, retention schedule) and
+   docs/ARCHITECTURE.md, written so a non-expert faculty member can follow
+   them, plus a one-page "How to demo the database" guide (what to open,
+   what to click, what to say).
+
+===============================================================================
+ACCEPTANCE CHECKLIST (test everything before saying done)
+===============================================================================
+[ ] docs/AUDIT.md exists; analytics/tracking result stated explicitly.
+[ ] /privacy, /terms, /cookies, /accessibility, /contact are public, linked in
+    the footer of every page and in signup; placeholders listed in
+    docs/TODO_BEFORE_LAUNCH.md.
+[ ] Signup needs an unticked, unbundled consent checkbox; consent_records
+    rows are written; re-consent is required when versions change.
+[ ] Tutor first-use notice works; chat history opt-in/delete works.
+[ ] /my-data: export, delete chat history, withdraw consent, delete account.
+[ ] No request leaves the site to fonts.googleapis.com or other unlisted
+    hosts; CSP and security headers active; no console CSP errors.
+[ ] axe-core: zero critical/serious issues on all routes, light and dark;
+    keyboard-only walkthrough of signup, quiz, tutor and breadboard passes;
+    all icon-only buttons have names; focus always visible.
+[ ] RLS tests pass for student/faculty/admin; audit_log records faculty
+    access to student data.
+[ ] k6 test at 1000 users meets the targets; reports are written.
+[ ] Admin "System & Database" page shows ER diagram, tables, metrics and
+    masked previews; staging demo data seeded; docs generated.
+Report anything you could not verify or had to simplify instead of hiding it.
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-10-13T11:05:54+05:30.
+</ADDITIONAL_METADATA>

@@ -1,0 +1,67 @@
+<USER_REQUEST>
+MASTER PROMPT (PART 6) — Legal Compliance, Privacy & Consent, Accessibility,
+Production Backend for 1000+ Users, and a Database Showcase for Faculty
+
+Continues Parts 1-5. Do not break earlier features. Never invent legal facts,
+names, addresses or compliance claims. Wherever a real name/contact is needed,
+use a clearly marked placeholder like [COLLEGE LEGAL NAME], [GRIEVANCE
+OFFICER NAME], [CONTACT EMAIL], [POSTAL ADDRESS] and list every placeholder in
+docs/TODO_BEFORE_LAUNCH.md. Never write "fully GDPR/DPDP compliant". Write
+policies in plain English (about Grade 8 reading level), with a version
+number and effective date.
+
+CONTEXT: Indian engineering-college portal (students 18+ expected; faculty;
+admin). Applicable: India's DPDP Act 2023 + DPDP Rules 2025 (core duties
+phase in around May 2027; SPDI Rules 2011 apply until then) — design to the
+stricter DPDP standard now. Verify the current status from official sources
+(meity.gov.in / pib.gov.in) before writing the policy text.
+
+===============================================================================
+TASK 24 — AUDIT FIRST (deliver a written report before changing anything)
+===============================================================================
+Produce docs/AUDIT.md with four inventories, based on the CURRENT code:
+ a) DATA INVENTORY: every personal-data field collected or stored (auth
+    email, display name, avatar URL, institution, progress, quiz attempts,
+    saved circuits, AI chat messages, support messages, report history,
+    IP/log data held by providers). For each: purpose, table/location,
+    who can see it, retention, and whether it is truly NECESSARY.
+ b) THIRD-PARTY INVENTORY: every external service/domain the site contacts
+    (Supabase, Google OAuth, Anthropic API, Google Fonts, any CDN, icon or
+    script host, any embed). Search the whole source, index.html, dist and
+    the network tab; include anything added by earlier prompts.
+ c) BROWSER STORAGE INVENTORY: every cookie, localSt
+<truncated 22657 bytes>
+scale without exposing
+   real students. The seed script must refuse to run against production.
+31c. Generate docs/DATABASE.md (schema, ER diagram, RLS rules in plain
+   English, indexes, backup policy, scaling plan, retention schedule) and
+   docs/ARCHITECTURE.md, written so a non-expert faculty member can follow
+   them, plus a one-page "How to demo the database" guide (what to open,
+   what to click, what to say).
+
+===============================================================================
+ACCEPTANCE CHECKLIST (test everything before saying done)
+===============================================================================
+[ ] docs/AUDIT.md exists; analytics/tracking result stated explicitly.
+[ ] /privacy, /terms, /cookies, /accessibility, /contact are public, linked in
+    the footer of every page and in signup; placeholders listed in
+    docs/TODO_BEFORE_LAUNCH.md.
+[ ] Signup needs an unticked, unbundled consent checkbox; consent_records
+    rows are written; re-consent is required when versions change.
+[ ] Tutor first-use notice works; chat history opt-in/delete works.
+[ ] /my-data: export, delete chat history, withdraw consent, delete account.
+[ ] No request leaves the site to fonts.googleapis.com or other unlisted
+    hosts; CSP and security headers active; no console CSP errors.
+[ ] axe-core: zero critical/serious issues on all routes, light and dark;
+    keyboard-only walkthrough of signup, quiz, tutor and breadboard passes;
+    all icon-only buttons have names; focus always visible.
+[ ] RLS tests pass for student/faculty/admin; audit_log records faculty
+    access to student data.
+[ ] k6 test at 1000 users meets the targets; reports are written.
+[ ] Admin "System & Database" page shows ER diagram, tables, metrics and
+    masked previews; staging demo data seeded; docs generated.
+Report anything you could not verify or had to simplify instead of hiding it.
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-10-13T11:05:54+05:30.
+</ADDITIONAL_METADATA>

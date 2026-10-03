@@ -4,8 +4,9 @@ import { Layers, HelpCircle, CheckCircle, Award, Sparkles, BookOpen, ChevronRigh
 import confetti from 'canvas-confetti';
 
 export const BreadboardLabPage: React.FC<{
+  initialPresetId?: string;
   onNavigateToLab?: (id: number) => void;
-}> = ({ onNavigateToLab }) => {
+}> = ({ initialPresetId, onNavigateToLab }) => {
   const [showGuide, setShowGuide] = useState(false);
 
   return (
@@ -59,7 +60,10 @@ export const BreadboardLabPage: React.FC<{
       </div>
 
       {/* Main Interactive Breadboard Component */}
-      <VirtualBreadboard />
+      <VirtualBreadboard
+        initialPresetId={initialPresetId}
+        onNavigateToLab={onNavigateToLab}
+      />
     </div>
   );
 };

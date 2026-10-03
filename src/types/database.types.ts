@@ -2,11 +2,14 @@
 // Database Type Definitions for Supabase (Virtual DSD Lab)
 // ==============================================================================
 
+export type UserRole = 'student' | 'faculty' | 'admin';
+
 export interface Profile {
   id: string;
   display_name: string | null;
   avatar_url: string | null;
-  role: 'student' | 'teacher' | 'admin';
+  role: UserRole;
+  is_active?: boolean;
   institution?: string;
   department?: string;
   created_at: string;
@@ -72,42 +75,74 @@ export interface ChatFeedbackRecord {
   created_at: string;
 }
 
+export interface FacultyReportRecord {
+  id: string;
+  generated_by: string;
+  report_type: 'class_progress' | 'quiz_summary' | 'full';
+  format: 'csv' | 'pdf';
+  filters?: Record<string, any>;
+  generated_at: string;
+  file_url?: string | null;
+}
+
+export type SupportMessageType = 'feedback' | 'help_request' | 'contact' | 'bug_report' | 'feature_request';
+export type SupportMessageStatus = 'new' | 'open' | 'in_progress' | 'in_review' | 'resolved' | 'closed';
+
+export interface SupportMessageRecord {
+  id: string;
+  user_id: string | null;
+  user_email?: string | null;
+  user_name?: string | null;
+  contact_email?: string | null;
+  category?: string | null;
+  type: SupportMessageType;
+  subject: string;
+  message: string;
+  status: SupportMessageStatus;
+  admin_reply?: string | null;
+  rating?: number | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface ModuleRecord {
   id: string;
   title: string;
   description?: string | null;
-  content: any;
-  order_number: number;
-  created_by?: string | null;
+  order_index?: number;
   created_at: string;
   updated_at: string;
+  [key: string]: any;
 }
 
 export interface LessonRecord {
   id: string;
   module_id: string;
   title: string;
-  content: string;
-  order_number: number;
+  content?: string | null;
+  order_index?: number;
   created_at: string;
   updated_at: string;
+  [key: string]: any;
 }
 
 export interface QuizRecord {
   id: string;
-  module_id: string;
+  module_id?: string | null;
   title: string;
+  description?: string | null;
+  time_limit?: number | null;
   created_at: string;
+  [key: string]: any;
 }
 
 export interface QuizQuestionRecord {
   id: string;
   quiz_id: string;
   question: string;
-  option_a: string;
-  option_b: string;
-  option_c: string;
-  option_d: string;
-  correct_answer: string;
-  marks: number;
+  options: string[] | any;
+  correct_answer: string | number;
+  explanation?: string | null;
+  [key: string]: any;
 }
+

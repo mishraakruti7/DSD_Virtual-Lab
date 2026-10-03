@@ -50,6 +50,53 @@ export const DsdTutorChat: React.FC<DsdTutorChatProps> = ({ activeTab, extraPara
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  // Consent & Data Rights state
+  const [hasConsentedTutor, setHasConsentedTutor] = useState<boolean>(() => {
+    return localStorage.getItem('dsd_tutor_consent_acknowledged') === 'true';
+  });
+  const [saveChatHistory, setSaveChatHistory] = useState<boolean>(() => {
+    return localStorage.getItem('dsd_tutor_save_history') === 'true'; // default false
+  });
+
+  const handleAcknowledgeConsent = async () => {
+    setHasConsentedTutor(true);
+    localStorage.setItem('dsd_tutor_consent_acknowledged', 'true');
+    if (user && isSupabaseConfigured()) {
+      try {
+        await supabase.from('consent_records').insert({
+          user_id: user.id,
+          document: 'ai-tutor-terms-v1.0.0',
+          version: '1.0.0',
+          purpose: 'educational_ai_guidance',
+          granted: true,
+          created_at: new Date().toISOString(),
+        });
+      } catch {
+        // silent fallback
+      }
+    }
+    playSuccessChime();
+  };
+
+  const handleToggleSaveHistory = (enabled: boolean) => {
+    setSaveChatHistory(enabled);
+    localStorage.setItem('dsd_tutor_save_history', enabled ? 'true' : 'false');
+  };
+
+  const handleDeleteHistory = async () => {
+    if (!window.confirm('Are you sure you want to delete all messages in this conversation?')) return;
+    setMessages([]);
+    localStorage.removeItem('dsd_tutor_history');
+    if (user && isSupabaseConfigured()) {
+      try {
+        await supabase.from('chat_history').delete().eq('user_id', user.id);
+      } catch {
+        // silent fallback
+      }
+    }
+    playSoftClick();
+  };
+
   // Derive human-readable topic context from current tab & param
   const getTopicContext = (): string => {
     switch (activeTab) {
@@ -75,6 +122,22 @@ export const DsdTutorChat: React.FC<DsdTutorChatProps> = ({ activeTab, extraPara
         return 'Mini-Projects & Hardware Schematics';
       case 'glossary':
         return 'DSD Technical Glossary (80+ Terms)';
+      case 'progress':
+        return 'Student Progress Dashboard & Course Analytics';
+      case 'faculty':
+        return 'Faculty Portal & Batch Submissions Evaluation';
+      case 'admin':
+        return 'System Administration & Security Console';
+      case 'feedback':
+        return 'Lab Feedback & Bug Report Center';
+      case 'help':
+        return 'Help Center & Platform User Guide';
+      case 'contact':
+        return 'Department Contact & Faculty Directory';
+      case 'resources':
+        return 'Course Resources, Syllabus & Schematics';
+      case 'home':
+        return 'Virtual DSD Lab Home & Overview';
       default:
         return 'Digital System Design (ECCOR2PC203)';
     }
@@ -87,8 +150,54 @@ export const DsdTutorChat: React.FC<DsdTutorChatProps> = ({ activeTab, extraPara
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isStreaming]);
 
+  // Handle ESC key to dismiss chat drawer
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isOpen) {
+        setIsOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen]);
+
   // Contextual Starter Prompts tailored to active tab
   const getStarterPrompts = () => {
+    if (activeTab === 'faculty') {
+      return [
+        'How do I review and grade student lab submissions?',
+        'How is continuous assessment (Term Work) calculated?',
+        'How can I export student marks in CSV format?',
+      ];
+    }
+    if (activeTab === 'admin') {
+      return [
+        'How do I manage student and faculty roles?',
+        'Check database connection and system audit status',
+        'How do RLS policies protect student data in Supabase?',
+      ];
+    }
+    if (activeTab === 'feedback') {
+      return [
+        'How do I report a simulation bug or incorrect truth table?',
+        'Suggest a new digital IC or experiment for the lab',
+        'Help me draft feedback for the course coordinators',
+      ];
+    }
+    if (activeTab === 'help') {
+      return [
+        'How do I use the Virtual Breadboard and wire ICs?',
+        'How do I run Verilog HDL simulation in the playground?',
+        'How do I export my lab report with timing waveforms?',
+      ];
+    }
+    if (activeTab === 'progress') {
+      return [
+        'Analyze my current lab completion and quiz scores',
+        'Which experiments do I need to complete next?',
+        'How can I improve my Bloom taxonomy level in DSD?',
+      ];
+    }
     if (activeTab === 'theory' && extraParam === 4) {
       return [
         'What is the difference between assign and always @(*) ?',
@@ -104,10 +213,20 @@ export const DsdTutorChat: React.FC<DsdTutorChatProps> = ({ activeTab, extraPara
       ];
     }
     if (activeTab === 'breadboard' || activeTab === 'lab') {
+      const activeIssues = (window as any).__DSD_CIRCUIT_STATE__?.issues || [];
+      if (activeIssues.length > 0) {
+        return [
+          "Why isn't my LED lighting up?",
+          "Explain the electrical errors in my circuit",
+          "What component or wire should I add next?",
+          "How do I wire a 555 timer in astable mode?",
+        ];
+      }
       return [
         'What are the VCC and GND pin numbers on 74LS series ICs?',
+        'How do I connect a pull-up resistor to a logic switch?',
         'How do I wire IC 7490 as a BCD decade counter?',
-        'Why does my breadboard clock signal bounce without a Schmitt trigger?',
+        'Why does an LED need a current-limiting resistor?',
       ];
     }
     if (activeTab === 'simulators') {
@@ -117,6 +236,13 @@ export const DsdTutorChat: React.FC<DsdTutorChatProps> = ({ activeTab, extraPara
         'How do setup time and hold time affect flip-flop timing?',
       ];
     }
+    if (activeTab === 'resources' || activeTab === 'glossary') {
+      return [
+        'Explain propagation delay vs contamination delay',
+        'Where can I find the Mumbai University DSD syllabus?',
+        'What is the difference between PLA and PAL architectures?',
+      ];
+    }
     // Default general prompts
     return [
       'Explain the race-around condition in JK flip-flop',
@@ -124,6 +250,18 @@ export const DsdTutorChat: React.FC<DsdTutorChatProps> = ({ activeTab, extraPara
       'What is the difference between synchronous and asynchronous counters?',
     ];
   };
+
+  // Listen for custom event to open tutor with pre-filled prompt
+  useEffect(() => {
+    const handleOpenTutor = (e: any) => {
+      setIsOpen(true);
+      if (e.detail?.prompt) {
+        handleSendMessage(e.detail.prompt);
+      }
+    };
+    window.addEventListener('dsd:open-tutor', handleOpenTutor);
+    return () => window.removeEventListener('dsd:open-tutor', handleOpenTutor);
+  }, [messages, isStreaming]);
 
   // Handle Feedback (thumbs up / thumbs down)
   const handleFeedback = async (messageId: string, rating: 'positive' | 'negative') => {
@@ -193,6 +331,100 @@ In synthesizable Verilog for **ECCOR2PC203**, always follow these golden rules:
 #### Golden Rule for SAKEC Students:
 - For **combinational logic** (Full Adders, Decoders, Muxes), use \`assign\` or \`always @(*)\` with \`=\`.
 - For **sequential logic** (Registers, Counters, Flip-Flops), use \`always @(posedge clk)\` with \`<=\` to eliminate simulation race conditions.`;
+    } else if (lower.includes('led') || lower.includes('error') || lower.includes('circuit') || lower.includes('diagnos')) {
+      const circuitState = (window as any).__DSD_CIRCUIT_STATE__;
+      const issues = circuitState?.issues || [];
+
+      if (issues.length > 0) {
+        fullText = `### Live Breadboard Circuit Diagnostic
+
+I examined your active breadboard wiring. Here is what is preventing normal operation:
+
+${issues
+  .map(
+    (issue: any, idx: number) =>
+      `#### ${idx + 1}. ${issue.title}\n- **Root Cause**: ${issue.reason}\n- **Fix**: ${issue.fixSuggestion}`
+  )
+  .join('\n\n')}
+
+#### Troubleshooting Tip:
+Ensure that every digital IC has +5V (VCC) wired to Pin 14/16 and 0V (GND) wired to Pin 7/8. LEDs also require a current-limiting resistor (~330Ω) between the gate driver and the LED anode (+).`;
+      } else if (circuitState?.components?.length > 0) {
+        fullText = `### Circuit Analysis: Good Electrical Continuity!
+
+All ${circuitState.components.length} placed components are properly powered with no direct shorts or polarity errors.
+
+- **VCC Connected**: ${circuitState.isVccConnected ? 'Yes (+5V rail active)' : 'No'}
+- **GND Connected**: ${circuitState.isGndConnected ? 'Yes (0V return established)' : 'No'}
+- **Current Output**: Check your logic switches to verify the truth table. Both inputs must be driven for the output gate to trigger the LED!`;
+      } else {
+        fullText = `To troubleshoot your circuit, place components from the **Component Palette** onto the breadboard grid and lay jumper wires between terminals. I will automatically diagnose floating pins, power shorts, and gate logic!`;
+      }
+    } else if (lower.includes('555') || lower.includes('blink') || lower.includes('astable')) {
+      fullText = `### Wiring a 555 Timer in Astable (Blinker) Mode
+
+To make an LED flash periodically at approximately 1–2 Hz:
+
+1. **Power Connections**:
+   - **Pin 8 (VCC)**: Connect to +5V rail.
+   - **Pin 1 (GND)**: Connect to 0V GND rail.
+   - **Pin 4 (RESET)**: Tie to +5V to prevent spurious resets.
+2. **Timing Loop (RC Network)**:
+   - Resistor **R1 (10kΩ)**: From +5V rail to **Pin 7 (DISCH)**.
+   - Resistor **R2 (47kΩ)**: From **Pin 7 (DISCH)** to **Pin 6 (THRES)**.
+   - Jumper wire: Connect **Pin 6 (THRES)** to **Pin 2 (TRIG)**.
+   - Capacitor **C1 (10µF electrolytic)**: Positive lead to **Pin 2/6**, negative lead to GND rail.
+3. **Output & LED**:
+   - Connect **Pin 3 (OUT)** through a 330Ω resistor to the **Anode (+)** of your LED.
+   - Connect the **Cathode (-)** of the LED to GND.
+
+The oscillation period is:
+$$T = 0.693 \\times (R_1 + 2R_2) \\times C_1 \\approx 0.72\\text{ seconds}$$
+
+You can also load this directly from the **Starter Circuits** menu on the breadboard!`;
+    } else if (lower.includes('grade') || lower.includes('faculty') || lower.includes('rubric') || lower.includes('submission') || lower.includes('marks')) {
+      fullText = `### Faculty Evaluation & Grading Guidance
+
+In the **Faculty Dashboard**, you can review student laboratory submissions and compute Term Work marks:
+
+1. **Submission Review**: Filter by experiment number or batch (SE AI-DS A/B/C). You can inspect circuit completeness, logic verification, and report documentation.
+2. **Grading Rubrics (Continuous Assessment)**:
+   - Practical Performance & Breadboard Wiring: **15 Marks**
+   - Journal Documentation & Waveforms: **5 Marks**
+   - Viva Voce & Conceptual Understanding: **5 Marks**
+   - **Total Term Work**: **25 Marks**
+3. **Exporting Data**: Click the **Export CSV** button in the top right to download batch grade sheets formatted for Mumbai University academic records.`;
+    } else if (lower.includes('admin') || lower.includes('role') || lower.includes('permission') || lower.includes('rls') || lower.includes('audit')) {
+      fullText = `### System Administration & Security Console
+
+In the **Admin Panel**:
+
+- **Role Management**: Assign user roles (\`student\`, \`faculty\`, \`admin\`) in the User Directory.
+- **Row-Level Security (RLS)**: Protects student journals and faculty marksheets in Supabase so students can only read/write their own records while faculty can view their assigned batches.
+- **Audit Logs**: Monitors authentication events, database sync operations, and lab submission timestamps for institutional accreditation.`;
+    } else if (lower.includes('feedback') || lower.includes('bug') || lower.includes('report')) {
+      fullText = `### Submitting Lab Feedback & Bug Reports
+
+To report an issue or suggest an improvement for **Virtual DSD Lab**:
+
+1. **Bug Report**: Provide the experiment name, step number, browser type, and expected vs observed behavior (e.g., LED logic state or waveform mismatch).
+2. **Feature Request**: Suggest new IC components (e.g. 74LS181 ALU) or additional interactive testbenches.
+3. Once submitted on the Feedback page, reports are logged to the faculty coordinator team for continuous lab enhancement.`;
+    } else if (lower.includes('help') || lower.includes('how to use') || lower.includes('guide')) {
+      fullText = `### Virtual DSD Lab Quick User Guide
+
+- **Virtual Breadboard**: Select components from the drawer, click to place on tie-points, and drag between holes to route jumper wires. VCC (+5V) connects to pin 14/16 and GND connects to pin 7/8.
+- **Guided vs Free Mode**: In Guided Mode, target ghost highlights show you where each IC and wire belongs. In Free Build mode, test any design!
+- **Verilog HDL**: Write IEEE 1364 synthesizable modules in the Verilog Playground and run in-browser simulation.
+- **Exporting Lab Reports**: Click **Export PDF Report** on any lab manual page to generate your formal journal with schematics and observations.`;
+    } else if (lower.includes('progress') || lower.includes('completion') || lower.includes('score') || lower.includes('bloom')) {
+      fullText = `### Student Progress & Course Analytics
+
+On your **My Progress** dashboard:
+
+- **Lab Practical Progress**: Tracks verified breadboard circuits and simulator runs across Labs 1 through 12.
+- **Bloom Taxonomy Mastery**: Evaluates your performance across Remember, Understand, Apply, Analyze, and Evaluate cognitive levels.
+- **Next Recommended Milestone**: Complete pending experiments and practice the Bloom-mapped quizzes to maximize your continuous assessment score.`;
     } else {
       fullText = `Hello! I am your **DSD Tutor** for the course **Digital System Design (ECCOR2PC203)** at SAKEC.
 
@@ -226,7 +458,7 @@ end
       setMessages((prev) =>
         prev.map((m) => (m.id === tutorMsgId ? { ...m, content: snapshot } : m))
       );
-      await new Promise((r) => setTimeout(r, 20 + Math.random() * 25));
+      await new Promise((r) => setTimeout(r, 18 + Math.random() * 20));
     }
   };
 
@@ -283,6 +515,7 @@ end
               content: m.content,
             })),
             topicContext,
+            circuitContext: (window as any).__DSD_CIRCUIT_STATE__ || undefined,
           }),
         });
 
@@ -449,10 +682,51 @@ end
     });
   };
 
+  // Per Task 20a: Only render for authenticated users. Strictly hidden for unauthenticated visitors.
+  if (!user) {
+    return null;
+  }
+
+  const getGreeting = () => {
+    switch (activeTab) {
+      case 'faculty':
+        return {
+          title: 'Faculty Evaluation Assistant',
+          desc: 'I can help you review student lab submissions, apply continuous assessment rubrics, and export batch marks.',
+        };
+      case 'admin':
+        return {
+          title: 'System & Security Console',
+          desc: 'Need assistance with student & faculty roles, Supabase Row-Level Security, or database audit logs?',
+        };
+      case 'feedback':
+        return {
+          title: 'Lab Feedback & Bug Center',
+          desc: 'Have suggestions or encountered an issue with virtual instruments? I can help you draft a detailed report.',
+        };
+      case 'help':
+        return {
+          title: 'Virtual Lab Documentation',
+          desc: 'Looking for guidance? Ask me anything about using the virtual breadboard, Verilog IDE, or lab reports.',
+        };
+      case 'progress':
+        return {
+          title: 'Course Analytics & Mastery',
+          desc: 'Want an analysis of your lab completion, quiz scores, or recommendations on which topics to study next?',
+        };
+      default:
+        return {
+          title: 'Stuck on a Circuit or HDL code?',
+          desc: 'Ask me to explain flip-flop timing diagrams, state machine design, MSI counter ICs, or review your Verilog HDL line by line!',
+        };
+    }
+  };
+  const greeting = getGreeting();
+
   return (
     <>
       {/* 1. Floating Trigger Button in Bottom-Right Corner */}
-      <div className="fixed bottom-6 right-6 z-40">
+      <div className="fixed bottom-6 right-6 z-50">
         <motion.button
           onClick={() => setIsOpen(!isOpen)}
           whileHover={{ scale: 1.05 }}
@@ -480,13 +754,13 @@ end
             animate={{ x: 0, opacity: 1 }}
             exit={{ x: '100%', opacity: 0 }}
             transition={{ type: 'spring', damping: 25, stiffness: 220 }}
-            className="fixed inset-y-0 right-0 z-50 w-full sm:w-[460px] bg-white/98 dark:bg-[#111119]/98 backdrop-blur-2xl border-l border-cream-border dark:border-darklab-border shadow-2xl flex flex-col overflow-hidden"
+            className="fixed inset-y-0 right-0 z-50 w-full sm:w-[460px] bg-white dark:bg-darklab-card border-l border-cream-border dark:border-darklab-border shadow-2xl flex flex-col overflow-hidden"
           >
             {/* Top Color Accent Line */}
             <div className="h-1.5 w-full bg-gradient-to-r from-brand-start via-brand-mid to-brand-end" />
 
             {/* Chat Panel Header */}
-            <div className="p-4 border-b border-cream-border dark:border-darklab-border flex items-center justify-between gap-3 bg-white/80 dark:bg-darklab-card/80 backdrop-blur-md">
+            <div className="p-4 border-b border-cream-border dark:border-darklab-border flex items-center justify-between gap-3 bg-white dark:bg-darklab-card">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-2xl bg-gradient-to-tr from-brand-start to-brand-end flex items-center justify-center text-white shadow-sm shadow-brand/30">
                   <Bot className="w-5 h-5" />
@@ -507,19 +781,31 @@ end
                 </div>
               </div>
 
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-2">
+                {/* Save Chat History Toggle */}
+                <label className="flex items-center gap-1.5 text-[10px] font-mono text-slate-600 dark:text-stone-300 cursor-pointer select-none bg-slate-50 dark:bg-slate-900/60 px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-800" title="Optional: Save messages to cloud history (default OFF)">
+                  <input
+                    type="checkbox"
+                    checked={saveChatHistory}
+                    onChange={(e) => handleToggleSaveHistory(e.target.checked)}
+                    className="w-3.5 h-3.5 rounded text-cyan-600 focus:ring-cyan-500"
+                  />
+                  <span>Save History</span>
+                </label>
+
                 {messages.length > 0 && (
                   <button
-                    onClick={() => setMessages([])}
-                    className="p-2 rounded-xl text-ink-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-cream-soft dark:hover:bg-darklab-base transition-colors"
-                    title="Clear Conversation"
+                    onClick={handleDeleteHistory}
+                    className="p-1.5 rounded-xl text-ink-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-cream-soft dark:hover:bg-darklab-base transition-colors"
+                    title="Delete Conversation History"
+                    aria-label="Delete Conversation History"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
                 )}
                 <button
                   onClick={() => setIsOpen(false)}
-                  className="p-2 rounded-xl text-ink-400 hover:text-ink-900 dark:hover:text-white hover:bg-cream-soft dark:hover:bg-darklab-base transition-colors"
+                  className="p-1.5 rounded-xl text-ink-400 hover:text-ink-900 dark:hover:text-white hover:bg-cream-soft dark:hover:bg-darklab-base transition-colors"
                   aria-label="Close Chat"
                 >
                   <X className="w-5 h-5" />
@@ -540,7 +826,46 @@ end
 
             {/* Chat Messages Body */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
-              {messages.length === 0 ? (
+              {!hasConsentedTutor ? (
+                /* One-time AI Tutor Statutory Consent & Privacy Notice */
+                <div className="h-full flex flex-col justify-center space-y-4 p-2 text-center">
+                  <div className="w-14 h-14 rounded-2xl bg-cyan-100 dark:bg-cyan-950/60 text-cyan-700 dark:text-cyan-400 mx-auto flex items-center justify-center shadow-sm">
+                    <Bot className="w-7 h-7" />
+                  </div>
+                  <div className="space-y-2">
+                    <h4 className="font-extrabold text-base text-slate-900 dark:text-white">
+                      Before You Ask the DSD Tutor
+                    </h4>
+                    <p className="text-xs text-slate-600 dark:text-stone-300">
+                      Please review how our educational AI assistant operates:
+                    </p>
+                    <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-left text-xs space-y-2 text-slate-700 dark:text-stone-300 leading-relaxed">
+                      <p className="flex items-start gap-2">
+                        <span className="font-bold text-cyan-600 dark:text-cyan-400 shrink-0">•</span>
+                        <span><strong>Third-Party Processing:</strong> Messages are sent to Anthropic's AI API via secure serverless Edge Functions to generate answers.</span>
+                      </p>
+                      <p className="flex items-start gap-2">
+                        <span className="font-bold text-cyan-600 dark:text-cyan-400 shrink-0">•</span>
+                        <span><strong>Data Minimisation:</strong> Never enter passwords, private contact numbers, or personal secrets. Your student name and email are never sent to the model.</span>
+                      </p>
+                      <p className="flex items-start gap-2">
+                        <span className="font-bold text-cyan-600 dark:text-cyan-400 shrink-0">•</span>
+                        <span><strong>Optional History:</strong> Saving your chat history is turned OFF by default. You can enable it or delete past conversations at any time.</span>
+                      </p>
+                      <p className="flex items-start gap-2">
+                        <span className="font-bold text-cyan-600 dark:text-cyan-400 shrink-0">•</span>
+                        <span><strong>Study Guide Only:</strong> Responses are generated to guide your learning and do not replace official faculty grading or the course lab manual.</span>
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={handleAcknowledgeConsent}
+                    className="w-full py-3 px-4 rounded-2xl bg-cyan-700 hover:bg-cyan-800 text-white font-bold text-xs shadow-md transition-all focus-visible:ring-2 focus-visible:ring-cyan-500"
+                  >
+                    I Understand & Agree — Continue to Tutor
+                  </button>
+                </div>
+              ) : messages.length === 0 ? (
                 /* Empty State with Course Starter Questions */
                 <div className="h-full flex flex-col justify-center space-y-6 py-6 text-center">
                   <div className="w-16 h-16 rounded-3xl bg-gradient-to-tr from-brand-start to-brand-end mx-auto flex items-center justify-center text-white shadow-lg shadow-brand/25">
@@ -549,10 +874,10 @@ end
 
                   <div className="space-y-1.5 px-4">
                     <h4 className="font-display font-extrabold text-lg text-ink-900 dark:text-cream-paper">
-                      Stuck on a Circuit or HDL code?
+                      {greeting.title}
                     </h4>
                     <p className="text-xs text-ink-600 dark:text-cream-muted max-w-xs mx-auto leading-relaxed">
-                      Ask me to explain flip-flop timing diagrams, state machine design, MSI counter ICs, or review your Verilog HDL line by line!
+                      {greeting.desc}
                     </p>
                   </div>
 
@@ -664,21 +989,60 @@ end
               </div>
             )}
 
-            {/* Logged Out Banner */}
-            {!user && (
-              <div className="px-4 py-1.5 bg-amber-50/70 dark:bg-amber-950/30 border-t border-amber-200/60 dark:border-amber-900/30 flex items-center justify-between text-[11px] text-amber-900 dark:text-amber-200">
-                <span>💡 Free guest session active.</span>
-                <button
-                  onClick={() => openAuthModal('signin')}
-                  className="font-bold underline text-brand-600 dark:text-brand-400 hover:text-brand-700"
-                >
-                  Log in to save history
-                </button>
-              </div>
-            )}
-
             {/* Footer Input Area */}
-            <div className="p-3.5 border-t border-cream-border dark:border-darklab-border bg-white/90 dark:bg-darklab-card/90 space-y-2">
+            <div className="p-3.5 border-t border-cream-border dark:border-darklab-border bg-white dark:bg-darklab-card space-y-2">
+              {/* Quick suggestion chips tailored to active page */}
+              <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1">
+                {activeTab === 'breadboard' && (window as any).__DSD_CIRCUIT_STATE__?.issues?.length > 0 ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        handleSendMessage(
+                          "Why isn't my LED lighting up? Please check my current breadboard wiring and connections."
+                        )
+                      }
+                      className="text-[10px] font-semibold px-2.5 py-1 rounded-full bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100 whitespace-nowrap transition-colors"
+                    >
+                      💡 Why isn't my LED lighting up?
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        handleSendMessage(
+                          "Explain the active electrical warnings in my breadboard circuit and how to fix them."
+                        )
+                      }
+                      className="text-[10px] font-semibold px-2.5 py-1 rounded-full bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800 hover:bg-amber-100 whitespace-nowrap transition-colors"
+                    >
+                      ⚠ Explain this error
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        handleSendMessage(
+                          "What component or wire connection should I add next to complete this circuit?"
+                        )
+                      }
+                      className="text-[10px] font-semibold px-2.5 py-1 rounded-full bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800 hover:bg-purple-100 whitespace-nowrap transition-colors"
+                    >
+                      ✨ What to connect next?
+                    </button>
+                  </>
+                ) : (
+                  getStarterPrompts().slice(0, 3).map((prompt, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => handleSendMessage(prompt)}
+                      className="text-[10px] font-semibold px-2.5 py-1 rounded-full bg-cream-soft dark:bg-darklab-base text-ink-700 dark:text-cream-paper border border-cream-border dark:border-darklab-border hover:border-brand-mid hover:text-brand-600 dark:hover:text-brand-300 whitespace-nowrap transition-colors"
+                    >
+                      💡 {prompt}
+                    </button>
+                  ))
+                )}
+              </div>
+
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
@@ -690,13 +1054,17 @@ end
                   type="text"
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
-                  placeholder={`Ask about ${topicContext}...`}
-                  disabled={isStreaming}
-                  className="flex-1 px-4 py-2.5 rounded-2xl bg-cream-soft/70 dark:bg-darklab-base border border-cream-border dark:border-darklab-border text-xs sm:text-sm text-ink-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-mid transition-all"
+                  placeholder={
+                    !hasConsentedTutor
+                      ? 'Please review and accept the notice above to begin...'
+                      : `Ask about ${topicContext}...`
+                  }
+                  disabled={isStreaming || !hasConsentedTutor}
+                  className="flex-1 px-4 py-2.5 rounded-2xl bg-cream-soft/70 dark:bg-darklab-base border border-cream-border dark:border-darklab-border text-xs sm:text-sm text-ink-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-mid transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 />
                 <button
                   type="submit"
-                  disabled={!inputValue.trim() || isStreaming}
+                  disabled={!inputValue.trim() || isStreaming || !hasConsentedTutor}
                   className="btn-brand-gradient p-2.5 rounded-2xl text-white shadow-md shadow-brand/20 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
                   aria-label="Send Message"
                 >

@@ -170,7 +170,7 @@ export const ProgressDashboardPage: React.FC<{
             </div>
 
             <h1 className="text-2xl sm:text-4xl font-display font-black tracking-tight text-ink-900 dark:text-cream-paper">
-              <span className="text-brand-gradient">My Academic Progress</span> Dashboard
+              My Academic <span className="text-brand-gradient">Progress Dashboard</span>
             </h1>
 
             <p className="text-xs sm:text-sm font-sans text-ink-700 dark:text-cream-muted font-medium leading-relaxed">

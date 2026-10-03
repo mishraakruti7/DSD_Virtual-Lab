@@ -98,8 +98,8 @@ export const LabManualPage: React.FC<{
                 12 University Lab Experiments • Mumbai University Scheme
               </span>
             </div>
-            <h1 className="text-2xl sm:text-4xl font-display font-black tracking-tight text-ink-900 dark:text-white">
-              <span className="text-brand-gradient">Digital System Design</span> Laboratory Manual
+            <h1 className="text-2xl sm:text-4xl font-display font-black tracking-tight text-ink-900 dark:text-cream-paper">
+              Digital System Design <span className="text-brand-gradient">Laboratory Manual</span>
             </h1>
             <p className="text-xs sm:text-sm font-sans text-ink-700 dark:text-cream-muted mt-2 max-w-2xl leading-relaxed font-medium">
               Complete university laboratory manual with experiment objectives, verified circuit pinouts, observation tables, step-by-step procedures, and viva voce flashcards.
@@ -242,7 +242,13 @@ export const LabManualPage: React.FC<{
                     className="px-3.5 py-2 rounded-xl bg-mod4 hover:bg-purple-700 !text-white font-bold flex items-center gap-1.5 shadow-violet transition-transform active:scale-95"
                   >
                     <Cpu className="w-3.5 h-3.5" />
-                    <span>Open Simulator</span>
+                    <span>
+                      {activeLab.simulatorId === 'verilog-playground'
+                        ? 'Open Verilog Playground'
+                        : activeLab.simulatorId === 'fsm-designer'
+                        ? 'Open FSM Designer'
+                        : 'Open Simulator'}
+                    </span>
                   </button>
                 )}
 

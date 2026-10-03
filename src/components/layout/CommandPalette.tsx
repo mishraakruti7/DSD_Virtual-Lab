@@ -112,7 +112,9 @@ export const CommandPalette: React.FC<{
 
     // Assessment & Calculator
     list.push(
-      { id: 'assess-calc', category: 'Academic', title: 'Marks & Grade Calculator', subtitle: 'Internal Assessment, TW, ESE & Viva Grading', targetTab: 'assessment', icon: <Award className="w-4 h-4 text-yellow-400" /> }
+      { id: 'assess-calc', category: 'Academic', title: 'Marks & Grade Calculator', subtitle: 'Internal Assessment, TW, ESE & Viva Grading', targetTab: 'assessment', icon: <Award className="w-4 h-4 text-yellow-400" /> },
+      { id: 'faculty-portal', category: 'Academic', title: 'Faculty Dashboard & Class Analytics', subtitle: 'Student Roster, Lab Progress, MergeSort Analytics, Class Reports', targetTab: 'faculty', icon: <Award className="w-4 h-4 text-indigo-400" /> },
+      { id: 'admin-portal', category: 'Academic', title: 'Admin User & Role Management Panel', subtitle: 'Manage Roles (Student/Faculty/Admin), System & DB Stats', targetTab: 'admin', icon: <Award className="w-4 h-4 text-purple-400" /> }
     );
 
     // Mini Projects

@@ -1,0 +1,36 @@
+# Robots.txt for Digital System Design Virtual Lab (ECCOR2PC203)
+# Allows public educational materials while safeguarding private student and faculty consoles.
+
+User-agent: *
+Allow: /
+Allow: /theory
+Allow: /labs
+Allow: /breadboard
+Allow: /simulators
+Allow: /quiz
+Allow: /analyzer
+Allow: /gallery
+Allow: /assessment
+Allow: /projects
+Allow: /resources
+Allow: /glossary
+Allow: /privacy
+Allow: /terms
+Allow: /cookies
+Allow: /accessibility
+Allow: /contact
+
+# Disallow private consoles and personal student data routes
+Disallow: /faculty
+Disallow: /faculty/
+Disallow: /admin
+Disallow: /admin/
+Disallow: /student
+Disallow: /student/
+Disallow: /my-data
+Disallow: /my-data/
+Disallow: /reset-password
+Disallow: /reset-password/
+Disallow: /api/
+
+Sitemap: https://dsdlab.sakec.ac.in/sitemap.xml

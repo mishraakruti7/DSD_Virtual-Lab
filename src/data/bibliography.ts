@@ -82,10 +82,10 @@ export const ONLINE_RESOURCES: WebResource[] = [
   },
   {
     id: 3,
-    title: 'Virtual Labs: Digital Electronics (IIT Bombay & MHRD Govt. of India)',
+    title: 'Virtual Labs: Digital Electronics (Ministry of Education & IIT Bombay Portal)',
     provider: 'Virtual Labs (IITB)',
-    url: 'https://de-iitb.vlabs.ac.in',
-    description: 'Online interactive simulation platform for basic gates, adders, multiplexers, and flip-flops.',
+    url: 'https://www.vlab.co.in/',
+    description: 'National online interactive simulation platform for basic gates, adders, multiplexers, and flip-flops.',
     relevantModules: [1, 2],
   },
   {

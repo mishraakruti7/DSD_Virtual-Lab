@@ -36,8 +36,8 @@ export const MiniProjectsPage: React.FC = () => {
               Term Work Mini-Project Repository • 5 Marks TW Component
             </span>
           </div>
-          <h1 className="text-2xl sm:text-4xl font-display font-black tracking-tight text-ink-900 dark:text-white">
-            <span className="text-brand-gradient">Digital Electronics</span> Mini-Projects
+          <h1 className="text-2xl sm:text-4xl font-display font-black tracking-tight text-ink-900 dark:text-cream-paper">
+            Digital Electronics <span className="text-brand-gradient">Mini-Projects</span>
           </h1>
           <p className="text-xs sm:text-sm font-sans text-ink-700 dark:text-cream-muted mt-2 max-w-2xl font-medium leading-relaxed">
             Curated undergraduate hardware project ideas designed with standard 74xx TTL ICs and CMOS circuits. Includes detailed specifications, required components, testing procedures, and evaluation rubrics.

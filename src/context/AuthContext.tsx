@@ -8,7 +8,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase, isSupabaseConfigured } from '../lib/supabaseClient';
-import { Profile } from '../types/database.types';
+import { Profile, UserRole } from '../types/database.types';
 import {
   fetchCloudProgress,
   migrateLocalStorageToCloud,
@@ -19,6 +19,9 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   profile: Profile | null;
+  role: UserRole | null;
+  isFacultyOrAdmin: boolean;
+  isAdmin: boolean;
   loading: boolean;
   isConfigured: boolean;
   authModalOpen: boolean;
@@ -28,10 +31,19 @@ interface AuthContextType {
 
   openAuthModal: (mode?: 'signin' | 'signup') => void;
   closeAuthModal: () => void;
-  signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
-  signUp: (email: string, password: string, displayName?: string) => Promise<{ error: Error | null }>;
+  signIn: (email: string, password: string) => Promise<{ error: Error | null; role?: UserRole }>;
+  signUp: (
+    email: string,
+    password: string,
+    displayName?: string,
+    role?: UserRole,
+    accessCode?: string
+  ) => Promise<{ error: Error | null; needsEmailVerification?: boolean }>;
+  resetPasswordForEmail: (email: string) => Promise<{ error: Error | null }>;
+  updatePassword: (newPassword: string) => Promise<{ error: Error | null }>;
   signInWithGoogle: () => Promise<{ error: Error | null }>;
-  demoSignIn: (name?: string, email?: string) => void;
+  demoSignIn: (name?: string, email?: string, demoRole?: UserRole) => void;
+  switchDemoRole: (role: UserRole) => void;
   signOut: () => Promise<void>;
   importLocalDataToCloud: () => Promise<{ success: boolean; importedItems?: number; error?: string }>;
   dismissMigrationPrompt: () => void;
@@ -67,9 +79,19 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           .maybeSingle();
 
         if (profileData) {
-          setProfile(profileData as Profile);
+          if (profileData.is_active === false) {
+            await supabase.auth.signOut();
+            setUser(null);
+            setSession(null);
+            setProfile(null);
+            return;
+          }
+          setProfile({
+            ...profileData,
+            role: (profileData.role as UserRole) || 'student'
+          } as Profile);
         } else {
-          // Generate fallback profile with default student role
+          // Generate fallback profile
           const fallbackProfile: Profile = {
             id: currentUser.id,
             display_name:
@@ -78,14 +100,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
               currentUser.email?.split('@')[0] ||
               'Student',
             avatar_url: currentUser.user_metadata?.avatar_url || null,
-            role: 'student', // Default role
+            role: (currentUser.user_metadata?.role as UserRole) || 'student',
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
           };
-
-          // Insert profile into database
-          await supabase.from('profiles').insert([fallbackProfile]);
-
           setProfile(fallbackProfile);
         }
 
@@ -165,29 +183,95 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setAuthModalOpen(false);
   };
 
-  const signIn = async (email: string, password: string) => {
+  const signIn = async (email: string, password: string): Promise<{ error: Error | null; role?: UserRole }> => {
     if (!configured) {
-      demoSignIn('Student Explorer', email);
-      closeAuthModal();
-      return { error: null };
+      if (import.meta.env.DEV) {
+        demoSignIn('Student Explorer', email);
+        closeAuthModal();
+        return { error: null, role: 'student' };
+      }
+      return { error: new Error('Backend service is temporarily unavailable. Please contact the administrator.') };
     }
 
     try {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) return { error };
+
+      // Look up role and active status from profiles table
+      let userRole: UserRole = 'student';
+      if (data.session?.user) {
+        const { data: prof } = await supabase
+          .from('profiles')
+          .select('role, is_active')
+          .eq('id', data.session.user.id)
+          .maybeSingle();
+
+        if (prof) {
+          if (prof.is_active === false) {
+            await supabase.auth.signOut();
+            setUser(null);
+            setSession(null);
+            setProfile(null);
+            return { error: new Error('Your account has been deactivated by the administrator.') };
+          }
+          if (prof.role) {
+            userRole = prof.role as UserRole;
+          }
+        }
+      }
+
       await handleUserSession(data.session);
       closeAuthModal();
-      return { error: null };
+      return { error: null, role: userRole };
     } catch (err: any) {
       return { error: err };
     }
   };
 
-  const signUp = async (email: string, password: string, displayName?: string) => {
+  const signUp = async (
+    email: string,
+    password: string,
+    displayName?: string,
+    role: UserRole = 'student',
+    accessCode?: string
+  ): Promise<{ error: Error | null; needsEmailVerification?: boolean }> => {
+    // 1. Faculty Signup (verified via Edge Function)
+    if (role === 'faculty') {
+      if (!configured) {
+        if (import.meta.env.DEV) {
+          demoSignIn(displayName || 'Prof. Faculty Member', email, 'faculty');
+          closeAuthModal();
+          return { error: null, needsEmailVerification: false };
+        }
+        return { error: new Error('Backend service is temporarily unavailable.') };
+      }
+
+      try {
+        const { data, error } = await supabase.functions.invoke('faculty-signup', {
+          body: { email, password, displayName: displayName || email.split('@')[0], accessCode },
+        });
+
+        if (error) {
+          return { error: new Error(error.message || 'Faculty registration failed.') };
+        }
+        if (data?.error) {
+          return { error: new Error(data.error) };
+        }
+
+        return { error: null, needsEmailVerification: false };
+      } catch (err: any) {
+        return { error: err };
+      }
+    }
+
+    // 2. Student Signup
     if (!configured) {
-      demoSignIn(displayName || 'New Student', email);
-      closeAuthModal();
-      return { error: null };
+      if (import.meta.env.DEV) {
+        demoSignIn(displayName || 'New Student', email, 'student');
+        closeAuthModal();
+        return { error: null, needsEmailVerification: false };
+      }
+      return { error: new Error('Backend service is temporarily unavailable. Please contact the administrator.') };
     }
 
     try {
@@ -197,13 +281,44 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         options: {
           data: {
             full_name: displayName,
+            role: 'student',
           },
         },
       });
       if (error) return { error };
-      await handleUserSession(data.session);
-      closeAuthModal();
-      return { error: null };
+
+      const needsEmailVerification = !data.session;
+      if (data.session) {
+        await handleUserSession(data.session);
+        closeAuthModal();
+      }
+      return { error: null, needsEmailVerification };
+    } catch (err: any) {
+      return { error: err };
+    }
+  };
+
+  const resetPasswordForEmail = async (email: string) => {
+    if (!configured) {
+      return { error: new Error('Password reset requires cloud backend configuration.') };
+    }
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/#reset-password`,
+      });
+      return { error };
+    } catch (err: any) {
+      return { error: err };
+    }
+  };
+
+  const updatePassword = async (newPassword: string) => {
+    if (!configured) {
+      return { error: new Error('Password update requires cloud backend configuration.') };
+    }
+    try {
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      return { error };
     } catch (err: any) {
       return { error: err };
     }
@@ -211,9 +326,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const signInWithGoogle = async () => {
     if (!configured) {
-      demoSignIn('Google Student', 'student.google@sakec.ac.in');
-      closeAuthModal();
-      return { error: null };
+      if (import.meta.env.DEV) {
+        demoSignIn('Google Student', 'student.google@sakec.ac.in', 'student');
+        closeAuthModal();
+        return { error: null };
+      }
+      return { error: new Error('Google sign-in is not configured.') };
     }
 
     try {
@@ -233,13 +351,22 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  // Demo sign-in for testing when Supabase keys are not configured yet
-  const demoSignIn = (name = 'Priya Sharma (SAKEC)', email = 'priya.sharma@sakec.ac.in') => {
+  // Demo sign-in: ONLY accessible in DEV mode
+  const demoSignIn = (
+    name = 'Priya Sharma (SAKEC)',
+    email = 'priya.sharma@sakec.ac.in',
+    demoRole: UserRole = 'student'
+  ) => {
+    if (!import.meta.env.DEV) {
+      console.error('Demo authentication is strictly disabled in production.');
+      return;
+    }
+
     const mockUser = {
-      id: 'demo-student-id-1234',
+      id: demoRole === 'admin' ? 'demo-admin-id' : demoRole === 'faculty' ? 'demo-faculty-id' : 'demo-student-id-1234',
       email,
       app_metadata: {},
-      user_metadata: { full_name: name },
+      user_metadata: { full_name: name, role: demoRole },
       aud: 'authenticated',
       created_at: new Date().toISOString(),
     } as User;
@@ -248,7 +375,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       id: mockUser.id,
       display_name: name,
       avatar_url: null,
-      role: 'student', // Default role for demo
+      role: demoRole,
       institution: 'Shah & Anchor Kutchhi Engineering College',
       department: 'Electronics & Computer Science',
       created_at: new Date().toISOString(),
@@ -271,6 +398,27 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const local = useCourseStore.getState().studentProgress;
     if (local.completedLabs.length > 0 || local.completedQuizzes.length > 0) {
       setShowMigrationPrompt(true);
+    }
+  };
+
+  const switchDemoRole = (newRole: UserRole) => {
+    if (!profile) return;
+    const updated: Profile = { ...profile, role: newRole };
+    setProfile(updated);
+    if (user) {
+      const updatedUser = {
+        ...user,
+        user_metadata: { ...user.user_metadata, role: newRole }
+      } as User;
+      setUser(updatedUser);
+      try {
+        localStorage.setItem(
+          'dsd_demo_auth_user',
+          JSON.stringify({ user: updatedUser, profile: updated })
+        );
+      } catch {
+        // Ignore
+      }
     }
   };
 
@@ -308,12 +456,19 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setShowMigrationPrompt(false);
   };
 
+  const role: UserRole | null = profile?.role ?? (user ? 'student' : null);
+  const isFacultyOrAdmin = role === 'faculty' || role === 'admin';
+  const isAdmin = role === 'admin';
+
   return (
     <AuthContext.Provider
       value={{
         user,
         session,
         profile,
+        role,
+        isFacultyOrAdmin,
+        isAdmin,
         loading,
         isConfigured: configured,
         authModalOpen,
@@ -324,8 +479,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         closeAuthModal,
         signIn,
         signUp,
+        resetPasswordForEmail,
+        updatePassword,
         signInWithGoogle,
         demoSignIn,
+        switchDemoRole,
         signOut,
         importLocalDataToCloud,
         dismissMigrationPrompt,

@@ -22,8 +22,8 @@ export const CourseOutcomesPage: React.FC<{ onNavigateToLab?: (id: number) => vo
                 Accreditation & Curriculum Matrix • NBA / NAAC Aligned
               </span>
             </div>
-            <h1 className="text-2xl sm:text-4xl font-display font-black tracking-tight text-ink-900 dark:text-white">
-              <span className="text-brand-gradient">Course Outcomes &</span> Articulation Matrix
+            <h1 className="text-2xl sm:text-4xl font-display font-black tracking-tight text-ink-900 dark:text-cream-paper">
+              Course Outcomes & <span className="text-brand-gradient">Articulation Matrix</span>
             </h1>
             <p className="text-xs sm:text-sm font-sans text-ink-700 dark:text-cream-muted mt-2 max-w-2xl font-medium leading-relaxed">
               Official Course Outcomes (CO1 to CO6), Program Outcomes (PO1 to PO12) mapping, and Bloom’s Revised Taxonomy cognitive level specifications for ECCOR2PC203.

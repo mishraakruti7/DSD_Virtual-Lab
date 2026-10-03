@@ -38,8 +38,8 @@ export const AssessmentPage: React.FC = () => {
             University of Mumbai Evaluation Scheme • 150 Total Marks
           </span>
         </div>
-        <h1 className="text-2xl sm:text-4xl font-display font-black tracking-tight text-ink-900 dark:text-white">
-          <span className="text-brand-gradient">Assessment & Grade</span> Calculator
+        <h1 className="text-2xl sm:text-4xl font-display font-black tracking-tight text-ink-900 dark:text-cream-paper">
+          Course Assessment & <span className="text-brand-gradient">Grade Calculator</span>
         </h1>
         <p className="text-xs sm:text-sm font-sans text-ink-700 dark:text-cream-muted mt-2 max-w-2xl leading-relaxed font-medium">
           Complete breakdown of Internal Assessment (IA), End Semester Exam (ESE), Term Work (TW), and Practical/Oral Examination with real-time grade and passing threshold evaluation.

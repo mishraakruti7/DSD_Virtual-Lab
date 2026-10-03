@@ -16,6 +16,8 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   display_name TEXT,
   avatar_url TEXT,
+  role TEXT NOT NULL DEFAULT 'student' CHECK (role IN ('student', 'faculty', 'admin')),
+  is_active BOOLEAN DEFAULT TRUE NOT NULL,
   institution TEXT DEFAULT 'Shah & Anchor Kutchhi Engineering College',
   department TEXT DEFAULT 'Electronics & Computer Science',
   created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL,
@@ -93,10 +95,13 @@ CREATE TABLE IF NOT EXISTS public.chat_usage (
   CONSTRAINT unique_user_or_client UNIQUE (user_id, client_identifier)
 );
 
--- ADDED: Table: chat_feedback
+-- ==============================================================================
+-- Table: chat_feedback
+-- Tracks student satisfaction (thumbs up / down) on DSD Tutor responses.
+-- ==============================================================================
 CREATE TABLE IF NOT EXISTS public.chat_feedback (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
   message_id TEXT NOT NULL,
   rating TEXT NOT NULL CHECK (rating IN ('positive', 'negative')),
   feedback_text TEXT,
@@ -104,139 +109,32 @@ CREATE TABLE IF NOT EXISTS public.chat_feedback (
   created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- Add roles to profiles
-ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS role TEXT DEFAULT 'student' CHECK (role IN ('student', 'teacher', 'admin'));
-
-UPDATE public.profiles
-SET role = 'student'
-WHERE role IS NULL;
-
--- Table: modules
-CREATE TABLE IF NOT EXISTS public.modules (
+-- ==============================================================================
+-- Table: faculty_reports
+-- Stores metadata of generated student performance & class evaluation reports.
+-- ==============================================================================
+CREATE TABLE IF NOT EXISTS public.faculty_reports (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  title TEXT NOT NULL,
-  description TEXT,
-  content JSONB DEFAULT '{}'::jsonb,
-  order_number INTEGER NOT NULL,
-  created_by UUID REFERENCES auth.users(id),
-  created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL,
-  updated_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
+  generated_by UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  report_type TEXT NOT NULL, -- 'class_progress' | 'quiz_summary' | 'full'
+  format TEXT NOT NULL DEFAULT 'csv', -- 'csv' | 'pdf'
+  filters JSONB DEFAULT '{}'::jsonb,
+  generated_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL,
+  file_url TEXT
 );
 
--- Table: lessons
-CREATE TABLE IF NOT EXISTS public.lessons (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  module_id UUID REFERENCES public.modules(id) ON DELETE CASCADE,
-  title TEXT NOT NULL,
-  content TEXT NOT NULL,
-  order_number INTEGER NOT NULL,
-  created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL,
-  updated_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
-);
-
--- Table: quizzes
-CREATE TABLE IF NOT EXISTS public.quizzes (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  module_id UUID REFERENCES public.modules(id) ON DELETE CASCADE,
-  title TEXT NOT NULL,
-  created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
-);
-
--- Table: quiz_questions
-CREATE TABLE IF NOT EXISTS public.quiz_questions (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  quiz_id UUID REFERENCES public.quizzes(id) ON DELETE CASCADE,
-  question TEXT NOT NULL,
-  option_a TEXT NOT NULL,
-  option_b TEXT NOT NULL,
-  option_c TEXT NOT NULL,
-  option_d TEXT NOT NULL,
-  correct_answer TEXT NOT NULL,
-  marks INTEGER DEFAULT 1
-);
-
--- Enable RLS
-ALTER TABLE public.modules ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.lessons ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.quizzes ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.quiz_questions ENABLE ROW LEVEL SECURITY;
-
--- Helper function to check role
-CREATE OR REPLACE FUNCTION public.is_admin_or_teacher()
-RETURNS BOOLEAN AS $$
-BEGIN
-  RETURN EXISTS (
-    SELECT 1 FROM public.profiles
-    WHERE id = auth.uid() AND role IN ('admin', 'teacher')
-  );
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, auth;
-
--- Admin role check
-CREATE OR REPLACE FUNCTION public.is_admin()
-RETURNS BOOLEAN AS $$
-BEGIN
-  RETURN EXISTS (
-    SELECT 1 FROM public.profiles
-    WHERE id = auth.uid() AND role = 'admin'
-  );
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, auth;
-
--- Policies (Idempotent: Drop then Create)
-DROP POLICY IF EXISTS "Anyone can view modules" ON public.modules;
-CREATE POLICY "Anyone can view modules" ON public.modules FOR SELECT USING (TRUE);
-
-DROP POLICY IF EXISTS "Teachers can manage modules" ON public.modules;
-CREATE POLICY "Teachers can manage modules" ON public.modules FOR ALL USING (public.is_admin_or_teacher());
-
-DROP POLICY IF EXISTS "Anyone can view lessons" ON public.lessons;
-CREATE POLICY "Anyone can view lessons" ON public.lessons FOR SELECT USING (TRUE);
-
-DROP POLICY IF EXISTS "Teachers can manage lessons" ON public.lessons;
-CREATE POLICY "Teachers can manage lessons" ON public.lessons FOR ALL USING (public.is_admin_or_teacher());
-
-DROP POLICY IF EXISTS "Anyone can view quizzes" ON public.quizzes;
-CREATE POLICY "Anyone can view quizzes" ON public.quizzes FOR SELECT USING (TRUE);
-
-DROP POLICY IF EXISTS "Teachers can manage quizzes" ON public.quizzes;
-CREATE POLICY "Teachers can manage quizzes" ON public.quizzes FOR ALL USING (public.is_admin_or_teacher());
-
-DROP POLICY IF EXISTS "Anyone can view quiz questions" ON public.quiz_questions;
-CREATE POLICY "Anyone can view quiz questions" ON public.quiz_questions FOR SELECT USING (TRUE);
-
-DROP POLICY IF EXISTS "Teachers can manage quiz questions" ON public.quiz_questions;
-CREATE POLICY "Teachers can manage quiz questions" ON public.quiz_questions FOR ALL USING (public.is_admin_or_teacher());
-
--- Create index for performance
-CREATE INDEX IF NOT EXISTS idx_lessons_module ON public.lessons(module_id);
-CREATE INDEX IF NOT EXISTS idx_quizzes_module ON public.quizzes(module_id);
-CREATE INDEX IF NOT EXISTS idx_questions_quiz ON public.quiz_questions(quiz_id);
-
+-- ==============================================================================
+-- Performance Indexes
+-- ==============================================================================
 CREATE INDEX IF NOT EXISTS idx_progress_user ON public.progress(user_id);
 CREATE INDEX IF NOT EXISTS idx_quiz_attempts_user ON public.quiz_attempts(user_id);
 CREATE INDEX IF NOT EXISTS idx_saved_circuits_user ON public.saved_circuits(user_id);
 CREATE INDEX IF NOT EXISTS idx_chat_history_user_conv ON public.chat_history(user_id, conversation_id);
 CREATE INDEX IF NOT EXISTS idx_chat_usage_user_window ON public.chat_usage(user_id, window_start);
-
--- Trigger function to prevent role escalation
-CREATE OR REPLACE FUNCTION public.prevent_role_escalation()
-RETURNS TRIGGER AS $$
-BEGIN
-  IF OLD.role IS DISTINCT FROM NEW.role AND NOT public.is_admin() THEN
-    RAISE EXCEPTION 'Unauthorized: only admins can change user roles.';
-  END IF;
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, auth;
-
-DROP TRIGGER IF EXISTS prevent_role_escalation_trigger ON public.profiles;
-CREATE TRIGGER prevent_role_escalation_trigger
-  BEFORE UPDATE ON public.profiles
-  FOR EACH ROW EXECUTE FUNCTION public.prevent_role_escalation();
+CREATE INDEX IF NOT EXISTS idx_faculty_reports_gen ON public.faculty_reports(generated_by);
 
 -- ==============================================================================
--- Auto-create profile trigger on new user signup
+-- Auto-create profile trigger on new user signup (Always defaults to 'student')
 -- ==============================================================================
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS trigger AS $$
@@ -247,10 +145,13 @@ BEGIN
     COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.raw_user_meta_data->>'name', split_part(NEW.email, '@', 1)),
     NEW.raw_user_meta_data->>'avatar_url',
     'student'
-  );
+  )
+  ON CONFLICT (id) DO UPDATE
+  SET display_name = EXCLUDED.display_name,
+      avatar_url = EXCLUDED.avatar_url;
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, auth;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
@@ -269,123 +170,205 @@ ALTER TABLE public.saved_circuits ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.chat_history ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.chat_usage ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.chat_feedback ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.faculty_reports ENABLE ROW LEVEL SECURITY;
 
 -- 1. Profiles Policies
-DROP POLICY IF EXISTS "Users can view their own profile" ON public.profiles;
 CREATE POLICY "Users can view their own profile"
   ON public.profiles FOR SELECT
   USING (auth.uid() = id);
 
-DROP POLICY IF EXISTS "Teachers can view all profiles" ON public.profiles;
-CREATE POLICY "Teachers can view all profiles"
+CREATE POLICY "Faculty and admin can view all profiles"
   ON public.profiles FOR SELECT
-  USING (public.is_admin_or_teacher());
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.profiles
+      WHERE profiles.id = auth.uid()
+      AND profiles.role IN ('faculty', 'admin')
+    )
+  );
 
-DROP POLICY IF EXISTS "Users can update their own profile" ON public.profiles;
 CREATE POLICY "Users can update their own profile"
   ON public.profiles FOR UPDATE
-  USING (auth.uid() = id)
+  USING (auth.uid() = id);
+
+CREATE POLICY "Users can insert their own profile"
+  ON public.profiles FOR INSERT
   WITH CHECK (auth.uid() = id);
 
-DROP POLICY IF EXISTS "Admins can update profiles" ON public.profiles;
-CREATE POLICY "Admins can update profiles"
-  ON public.profiles FOR UPDATE
-  USING (public.is_admin());
-
 -- 2. Progress Policies
-DROP POLICY IF EXISTS "Users can view their own progress" ON public.progress;
 CREATE POLICY "Users can view their own progress"
   ON public.progress FOR SELECT
   USING (auth.uid() = user_id);
 
-DROP POLICY IF EXISTS "Teachers can view all progress" ON public.progress;
-CREATE POLICY "Teachers can view all progress"
+CREATE POLICY "Faculty and admin can view all student progress"
   ON public.progress FOR SELECT
-  USING (public.is_admin_or_teacher());
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.profiles
+      WHERE profiles.id = auth.uid()
+      AND profiles.role IN ('faculty', 'admin')
+    )
+  );
 
-DROP POLICY IF EXISTS "Users can insert their own progress" ON public.progress;
 CREATE POLICY "Users can insert their own progress"
   ON public.progress FOR INSERT
   WITH CHECK (auth.uid() = user_id);
 
-DROP POLICY IF EXISTS "Users can update their own progress" ON public.progress;
 CREATE POLICY "Users can update their own progress"
   ON public.progress FOR UPDATE
   USING (auth.uid() = user_id);
 
-DROP POLICY IF EXISTS "Users can delete their own progress" ON public.progress;
 CREATE POLICY "Users can delete their own progress"
   ON public.progress FOR DELETE
   USING (auth.uid() = user_id);
 
 -- 3. Quiz Attempts Policies
-DROP POLICY IF EXISTS "Users can view their own quiz attempts" ON public.quiz_attempts;
 CREATE POLICY "Users can view their own quiz attempts"
   ON public.quiz_attempts FOR SELECT
   USING (auth.uid() = user_id);
 
-DROP POLICY IF EXISTS "Teachers can view all quiz attempts" ON public.quiz_attempts;
-CREATE POLICY "Teachers can view all quiz attempts"
+CREATE POLICY "Faculty and admin can view all student quiz attempts"
   ON public.quiz_attempts FOR SELECT
-  USING (public.is_admin_or_teacher());
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.profiles
+      WHERE profiles.id = auth.uid()
+      AND profiles.role IN ('faculty', 'admin')
+    )
+  );
 
-DROP POLICY IF EXISTS "Users can insert their own quiz attempts" ON public.quiz_attempts;
 CREATE POLICY "Users can insert their own quiz attempts"
   ON public.quiz_attempts FOR INSERT
   WITH CHECK (auth.uid() = user_id);
 
 -- 4. Saved Circuits Policies
-DROP POLICY IF EXISTS "Users can view their own saved circuits" ON public.saved_circuits;
 CREATE POLICY "Users can view their own saved circuits"
   ON public.saved_circuits FOR SELECT
   USING (auth.uid() = user_id);
 
-DROP POLICY IF EXISTS "Users can insert their own saved circuits" ON public.saved_circuits;
+CREATE POLICY "Faculty and admin can view all student saved circuits"
+  ON public.saved_circuits FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.profiles
+      WHERE profiles.id = auth.uid()
+      AND profiles.role IN ('faculty', 'admin')
+    )
+  );
+
 CREATE POLICY "Users can insert their own saved circuits"
   ON public.saved_circuits FOR INSERT
   WITH CHECK (auth.uid() = user_id);
 
-DROP POLICY IF EXISTS "Users can update their own saved circuits" ON public.saved_circuits;
 CREATE POLICY "Users can update their own saved circuits"
   ON public.saved_circuits FOR UPDATE
   USING (auth.uid() = user_id);
 
-DROP POLICY IF EXISTS "Users can delete their own saved circuits" ON public.saved_circuits;
 CREATE POLICY "Users can delete their own saved circuits"
   ON public.saved_circuits FOR DELETE
   USING (auth.uid() = user_id);
 
+-- 5. Faculty Reports Policies
+CREATE POLICY "Faculty and admin can manage their own reports"
+  ON public.faculty_reports FOR ALL
+  USING (
+    auth.uid() = generated_by
+    AND EXISTS (
+      SELECT 1 FROM public.profiles
+      WHERE profiles.id = auth.uid()
+      AND profiles.role IN ('faculty', 'admin')
+    )
+  )
+  WITH CHECK (
+    auth.uid() = generated_by
+    AND EXISTS (
+      SELECT 1 FROM public.profiles
+      WHERE profiles.id = auth.uid()
+      AND profiles.role IN ('faculty', 'admin')
+    )
+  );
+
 -- 5. Chat History Policies
-DROP POLICY IF EXISTS "Users can view their own chat history" ON public.chat_history;
 CREATE POLICY "Users can view their own chat history"
   ON public.chat_history FOR SELECT
   USING (auth.uid() = user_id);
 
-DROP POLICY IF EXISTS "Users can insert their own chat history" ON public.chat_history;
 CREATE POLICY "Users can insert their own chat history"
   ON public.chat_history FOR INSERT
   WITH CHECK (auth.uid() = user_id);
 
-DROP POLICY IF EXISTS "Users can delete their own chat history" ON public.chat_history;
 CREATE POLICY "Users can delete their own chat history"
   ON public.chat_history FOR DELETE
   USING (auth.uid() = user_id);
 
 -- 6. Chat Usage Policies
--- Users can only read their own usage records.
--- The service role bypasses RLS automatically; no permissive policy needed.
-DROP POLICY IF EXISTS "Users can read their own usage" ON public.chat_usage;
 CREATE POLICY "Users can read their own usage"
   ON public.chat_usage FOR SELECT
   USING (auth.uid() = user_id);
 
--- 7. Chat Feedback Policies
-DROP POLICY IF EXISTS "Authenticated users can submit feedback" ON public.chat_feedback;
-CREATE POLICY "Authenticated users can submit feedback"
-  ON public.chat_feedback FOR INSERT
-  WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Service role can manage usage"
+  ON public.chat_usage FOR ALL
+  USING (TRUE);
 
-DROP POLICY IF EXISTS "Users can view their own feedback" ON public.chat_feedback;
+-- 7. Chat Feedback Policies
+CREATE POLICY "Anyone can submit feedback"
+  ON public.chat_feedback FOR INSERT
+  WITH CHECK (TRUE);
+
 CREATE POLICY "Users can view their own feedback"
   ON public.chat_feedback FOR SELECT
   USING (auth.uid() = user_id);
+
+-- ==============================================================================
+-- Table: support_messages
+-- User feedback, help requests, and public inquiries.
+-- ==============================================================================
+CREATE TABLE IF NOT EXISTS public.support_messages (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  user_email TEXT,
+  user_name TEXT,
+  type TEXT NOT NULL CHECK (type IN ('feedback', 'help_request', 'contact')),
+  subject TEXT NOT NULL,
+  message TEXT NOT NULL,
+  rating INTEGER CHECK (rating IS NULL OR (rating >= 1 AND rating <= 5)),
+  status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'in_progress', 'resolved')),
+  admin_reply TEXT,
+  created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL,
+  updated_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+ALTER TABLE public.support_messages ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can insert own support messages"
+  ON public.support_messages FOR INSERT
+  TO authenticated WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Public can submit contact messages"
+  ON public.support_messages FOR INSERT
+  TO anon WITH CHECK (type = 'contact' AND user_id IS NULL);
+
+CREATE POLICY "Users can view own support messages"
+  ON public.support_messages FOR SELECT
+  TO authenticated USING (auth.uid() = user_id);
+
+CREATE POLICY "Faculty and admin view all support messages"
+  ON public.support_messages FOR SELECT
+  TO authenticated USING (
+    EXISTS (
+      SELECT 1 FROM public.profiles
+      WHERE profiles.id = auth.uid()
+      AND profiles.role IN ('faculty', 'admin')
+    )
+  );
+
+CREATE POLICY "Admins can update support messages"
+  ON public.support_messages FOR UPDATE
+  TO authenticated USING (
+    EXISTS (
+      SELECT 1 FROM public.profiles
+      WHERE profiles.id = auth.uid()
+      AND profiles.role = 'admin'
+    )
+  );
+

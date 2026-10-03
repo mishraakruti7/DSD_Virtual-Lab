@@ -58,7 +58,7 @@ export const SITE_CONFIG: SiteConfig = {
     affiliation: 'Affiliated to University of Mumbai',
     accreditation: 'Approved by AICTE, Accredited by NAAC & NBA',
     department: 'Department of Electronics & Computer Science / Computer Engineering',
-    websiteUrl: 'https://www.shahandanchor.com',
+    websiteUrl: 'https://www.sakec.ac.in/',
     academicYear: '2024–2025 / 2025–2026',
   },
   course: {
@@ -93,8 +93,8 @@ export const SITE_CONFIG: SiteConfig = {
     labRoomPlaceholder: 'Digital Electronics & Hardware Design Lab (Lab 405)',
   },
   links: {
-    mumbaiUniversitySyllabusUrl: 'https://mu.ac.in/syllabus',
-    collegePortalUrl: 'https://www.shahandanchor.com',
+    mumbaiUniversitySyllabusUrl: 'https://mu.ac.in/old/syllabus-of-nep-2020.html',
+    collegePortalUrl: 'https://www.sakec.ac.in/',
     nptelDsdUrl: 'https://nptel.ac.in/courses/117106086',
   },
 };

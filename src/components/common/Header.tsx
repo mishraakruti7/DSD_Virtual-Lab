@@ -100,7 +100,7 @@ export const Header: React.FC<HeaderProps> = ({ activeStation, onSelectStation }
 
       {/* Mobile Drawer Menu */}
       {mobileMenuOpen && (
-        <div className="lg:hidden border-t border-[#ded5c2] bg-[#faf6ee]/98 px-4 pt-3 pb-5 shadow-soft-lg space-y-1.5">
+        <div className="lg:hidden border-t border-[#ded5c2] bg-[#faf6ee] px-4 pt-3 pb-5 shadow-soft-lg space-y-1.5">
           {stations.map((item) => {
             const Icon = item.icon;
             const isActive = activeStation === item.id;

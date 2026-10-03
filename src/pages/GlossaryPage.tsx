@@ -81,8 +81,8 @@ export const GlossaryPage: React.FC = () => {
               Comprehensive Technical Index • 80+ Vetted Terms
             </span>
           </div>
-          <h1 className="text-2xl sm:text-4xl font-display font-black tracking-tight text-ink-900 dark:text-white">
-            <span className="text-brand-gradient">Digital System Design</span> Glossary
+          <h1 className="text-2xl sm:text-4xl font-display font-black tracking-tight text-ink-900 dark:text-cream-paper">
+            Digital System Design <span className="text-brand-gradient">Glossary</span>
           </h1>
           <p className="text-xs sm:text-sm font-sans text-ink-700 dark:text-cream-muted mt-2 max-w-2xl font-medium leading-relaxed">
             Exhaustive alphabetical reference of essential digital electronics definitions, characteristic equations, logic rules, and hardware timing terminology.

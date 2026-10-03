@@ -19,8 +19,8 @@ export const ResourcesPage: React.FC = () => {
               Academic Bibliography & Learning Resources
             </span>
           </div>
-          <h1 className="text-2xl sm:text-4xl font-display font-black tracking-tight text-ink-900 dark:text-white">
-            <span className="text-brand-gradient">Textbooks, NPTEL Lectures</span> & Course References
+          <h1 className="text-2xl sm:text-4xl font-display font-black tracking-tight text-ink-900 dark:text-cream-paper">
+            Textbooks, NPTEL Lectures & <span className="text-brand-gradient">Course References</span>
           </h1>
           <p className="text-xs sm:text-sm font-sans text-ink-700 dark:text-cream-muted mt-2 max-w-2xl leading-relaxed font-medium">
             Standard prescribed textbooks and reference manuals aligned with University of Mumbai syllabus for {SITE_CONFIG.course.code} ({SITE_CONFIG.course.title}).
@@ -131,13 +131,23 @@ export const ResourcesPage: React.FC = () => {
         </p>
         <div className="flex flex-wrap gap-3 pt-2 text-xs font-sans">
           <a
+            href="https://mu.ac.in/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-4 py-2.5 rounded-2xl bg-white dark:bg-darklab-subtle border border-cream-border dark:border-darklab-border text-ink-900 dark:text-white hover:border-brand-mid flex items-center gap-2 transition-all shadow-xs font-bold"
+          >
+            <School className="w-4 h-4 text-mod1" />
+            <span>University of Mumbai Portal</span>
+            <ExternalLink className="w-3 h-3 text-ink-500 dark:text-cream-muted" />
+          </a>
+          <a
             href={SITE_CONFIG.links.mumbaiUniversitySyllabusUrl}
             target="_blank"
             rel="noopener noreferrer"
             className="px-4 py-2.5 rounded-2xl bg-white dark:bg-darklab-subtle border border-cream-border dark:border-darklab-border text-ink-900 dark:text-white hover:border-brand-mid flex items-center gap-2 transition-all shadow-xs font-bold"
           >
             <FileText className="w-4 h-4 text-mod2" />
-            <span>Mumbai University Syllabus Portal</span>
+            <span>MU NEP-2020 Syllabus</span>
             <ExternalLink className="w-3 h-3 text-ink-500 dark:text-cream-muted" />
           </a>
           <a
